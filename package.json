@@ -1,0 +1,41 @@
+{
+  "name": "homebridge-airvisual",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for AirVisual API",
+  "main": "index.js",
+  "scripts": {
+    "test": "eslint index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schmittx/homebridge-airvisual.git"
+  },
+  "keywords": [
+    "air quality",
+    "airvisual",
+    "homebridge",
+    "homebridge-plugin",
+    "humidity",
+    "pollution",
+    "temperature",
+    "weather"
+  ],
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.18.2",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.9.0"
+  },
+  "author": "Matt Schmitt",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/schmittx/homebridge-airvisual/issues"
+  },
+  "homepage": "https://github.com/schmittx/homebridge-airvisual#readme",
+  "dependencies": {
+    "request": "^2.83.0"
+  }
+}

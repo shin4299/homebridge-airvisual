@@ -1,75 +1,95 @@
-"use strict";
+'use strict';
 
-var request = require("request");
-var Service, Characteristic;
+const firmware = require('./package.json').version;
+const request = require('request');
 
-module.exports = function (homebridge) {
-    Service = homebridge.hap.Service;
-    Characteristic = homebridge.hap.Characteristic;
-    homebridge.registerAccessory("homebridge-airvisual", "AirVisual", AirVisualAccessory);
-}
+var Service;
+var Characteristic;
 
 function AirVisualAccessory(log, config) {
   this.log = log;
-  this.name = config["name"];
 
-  this.key = config["api_key"];
-  this.standard = config["aqi_standard"] || "us";
-  this.latitude = config["latitude"];
-  this.longitude = config["longitude"];
-  this.radius = config["radius"] || 1000;
-  this.city = config["city"];
-  this.state = config["state"];
-  this.country = config["country"];
-  this.polling = config["polling"] || false;
+  this.name = config.name;
+  this.key = config.api_key;
+  this.standard = config.aqi_standard || 'us';
+  this.latitude = config.latitude;
+  this.longitude = config.longitude;
+  this.city = config.city;
+  this.state = config.state;
+  this.country = config.country;
+  this.sensor = config.sensor || 'air_quality';
+  this.polling = config.polling || false;
 
-
-/*
-  this.zip = config["zipcode"];
-  this.distance = config["distance"] || "25";
-  this.airnow_api = config["airnow_api"];
-  this.aqicn_api = config["aqicn_api"];
-  this.aqicn_city = config["aqicn_city"] || "here";
-  this.mpolling = config["polling"] || "off";
-  this.polling = this.mpolling;
-  this.serial = config["serial"];
-
-
-  if (this.provider != "airnow" && this.provider != "aqicn") {
-    throw new Error("Invalid provider specified");
+  if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
+    this.log.error('Unsupported air quality standard specified, defaulting to US');
+    this.standard = 'us';
   }
-  if (this.provider == "airnow" && !this.zip) {
-    throw new Error("A config value for 'zipcode' is required if using AirNow for provider");
+  if (!(['air_quality', 'humidity', 'temperature'].indexOf(this.sensor) > -1)) {
+    this.log.error('Unsupported sensor specified, defaulting to air quality');
+    this.sensor = 'air_quality';
   }
-  if (this.provider == "airnow" && !this.airnow_api) {
-    throw new Error("A config value for 'airnow_api' is required if using AirNow for provider");
+  if (!([true, false].indexOf(this.polling) > -1)) {
+    this.log.error('Unsupported option specified for polling, defaulting to false');
+    this.polling = false;
   }
-  if (this.provider == "aqicn" && !this.aqicn_api) {
-    throw new Error("A config value for 'aqicn_api' is required if using AQICN for provider");
+
+  if (this.latitude && this.longitude) {
+    this.log.debug('Using GPS coordinates');
+    this.mode = 'gps';
+    this.serial = String(this.latitude.toFixed(3) + ', ' + this.longitude.toFixed(3));
+  } else if (this.city && this.state && this.country) {
+    this.log.debug('Using specified city');
+    this.mode = 'city';
+    this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
+  } else {
+    this.log.debug('Using IP geolocation');
+    this.mode = 'ip';
+    this.serial = 'IP Geolocation';
   }
-*/
 
   if (this.polling) {
     var that = this;
-    this.interval = 5 * 60000;
+    this.interval = 10 * 60000;
     setTimeout(function () {
       that.servicePolling();
     }, this.interval);
-  };
+  }
 
-  this.log.debug("Polling is %s", (this.polling) ? "enabled" : "disabled");
+  this.log.debug('Polling is %s', (this.polling) ? 'enabled' : 'disabled');
 
   this.noFault = Characteristic.StatusFault.NO_FAULT; // 0
   this.generalFault = Characteristic.StatusFault.GENERAL_FAULT; // 1
+
+  this.conditions = {};
 }
 
 AirVisualAccessory.prototype = {
 
   servicePolling: function () {
-    this.log.debug("Polling");
-    this.getData(function (aqi) {
+    this.log.debug('Polling');
+    this.getData(function (conditions) {
       var that = this;
-      that.airQualitySensorService.setCharacteristic(Characteristic.AirQuality, aqi);
+      switch (that.sensor) {
+        case 'humidity':
+          that.sensorService.setCharacteristic(
+            Characteristic.CurrentRelativeHumidity,
+            conditions.humidity
+          );
+          break;
+        case 'temperature':
+          that.sensorService.setCharacteristic(
+            Characteristic.CurrentTemperature,
+            conditions.temperature
+          );
+          break;
+        case 'air_quality':
+        default:
+          that.sensorService.setCharacteristic(
+            Characteristic.AirQuality,
+            conditions.air_quality
+          );
+          break;
+      }
       setTimeout(function () {
         that.servicePolling();
       }, that.interval);
@@ -77,302 +97,199 @@ AirVisualAccessory.prototype = {
   },
 
   getAirQuality: function (callback) {
-    this.getData(function (aqi) {
-      callback(null, aqi);
+    this.getData(function (conditions) {
+      callback(null, conditions.air_quality);
+    });
+  },
+
+  getHumidity: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.humidity);
+    });
+  },
+
+  getTemperature: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.temperature);
     });
   },
 
   getData: function (callback) {
     var that = this;
-    var url, aqi;
+    var url;
 
-    aqi = 0;
-    
-    if (this.latitude && this.longitude) {
-      url = "https://api.airvisual.com/v2/nearest_city?lat=" + this.latitude + "&lon=" + this.longitude + "&key=" + this.key;
-      that.log.debug("Using GPS coordinates");
-    }
-    else if (this.city && this.state && this.country) {
-      url = "https://api.airvisual.com/v2/city?city=" + this.city + "&state=" + this.state + "&country=" + this.country + "&key=" + this.key;
-      that.log.debug("Using city, state, and country");
-    }
-    else {
-      url = "https://api.airvisual.com/v2/nearest_city?key=" + this.key;
-      that.log.debug("Using IP geolocation");
+    switch (that.mode) {
+      case 'gps':
+        url = 'https://api.airvisual.com/v2/nearest_city?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
+        break;
+      case 'city':
+        url = 'https://api.airvisual.com/v2/city?city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
+        break;
+      case 'ip':
+      default:
+        url = 'https://api.airvisual.com/v2/nearest_city?key=' + that.key;
+        break;
     }
 
     request({
       url: url,
       json: true
-    }, function (err, response, data) {
-      if (!err && response.statusCode === 200) {
+    }, function (error, response, data) {
+      if (!error) {
         switch (data.status) {
-          case "success":
-            that.log.debug("Success");
-            aqi = parseFloat("data.current.pollution.aqi" + this.standard);
-            that.log.debug("Air quality index is: %s", aqi);
+          case 'success':
+            that.log.debug('City is: %s', data.data.city);
+            that.log.debug('State is: %s', data.data.state);
+            that.log.debug('Country is: %s', data.data.country);
+            that.log.debug('Latitude is: %s', data.data.location.coordinates[0]);
+            that.log.debug('Longitude is: %s', data.data.location.coordinates[1]);
 
-            //that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, true);
-            //that.log.debug("Active status is: true");
+            that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
+            that.conditions.humidity = parseFloat(data.data.current.weather.hu);
+            that.conditions.temperature = parseFloat(data.data.current.weather.tp);
 
-            //that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.noFault);
-            //that.log.debug("Fault status is: no fault");
-
-            break:
-          case "call_limit_reached":
-            that.log.debug("Call limit reached");
-            break:
-          case "api_key_expired":
-            that.log.debug("API key expired");
-            break:
-          case "incorrect_api_key":
-            that.log.debug("Incorrect API key");
-            break:
-          case "ip_location_failed":
-            that.log.debug("IP location failed");
-            break:
-          case "no_nearest_station":
-            that.log.debug("No nearest station");
-            break:
-          case "feature_not_available":
-            that.log.debug("Feature not available");
-            break:
-          case "too_many_requests":
-            that.log.debug("Too many requests");
-            break:
-          default:
-            that.log.debug("Unknown status");
-            break:
-        }
-      }
-      else {
-        that.log.error("Unknown error");
-
-        //that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, fault);
-        //that.log.debug("Active status is: false");
-
-        //that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
-        //that.log.debug("Fault status is: general fault");
-      }
-      callback(that.convertAQI(aqi));
-    });
-
-/*
-    if (this.provider == "airnow") {
-      url = "http://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=" + this.zip +
-      "&distance=" + this.distance + "&API_KEY=" + this.airnow_api;
-
-      request({
-        url: url,
-        json: true
-      }, function (err, response, observations) {
-        if (!err && response.statusCode === 200){
-          if (typeof observations[0] === "undefined"){
-            that.log.error("Configuration error: Invalid zip code for %s", that.providerProper);
-
-            that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, false);
-            that.log.debug("Active status is: false");
-
-            that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
-            that.log.debug("Fault status is: general fault");
-          }
-          else if (typeof observations[0]["AQI"] === "undefined") {
-            that.log.error("Observation error: %s for %s", striptags(observations), that.providerProper);
- 
-            that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, false);
-            that.log.debug("Active status is: false");
- 
-            that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
-            that.log.debug("Fault status is: general fault");
-          }
-          else {
-            for (var key in observations) {
-              switch (observations[key]["ParameterName"]) {
-                case "O3":
-                  var o3 = parseFloat(observations[key]["AQI"]);
-                  that.airQualitySensorService.setCharacteristic(Characteristic.OzoneDensity, o3);
-                  that.log.debug("Ozone density is: %s", o3);
-                  break;
-                case "PM2.5":
-                  var pm25 = parseFloat(observations[key]["AQI"]);
-                  that.airQualitySensorService.setCharacteristic(Characteristic.PM2_5Density, pm25);
-                  that.log.debug("Ozone density is: %s", pm25);
-                  break;
-                case "PM10":
-                  var pm10 = parseFloat(observations[key]["AQI"]);
-                  that.airQualitySensorService.setCharacteristic(Characteristic.PM10Density, pm10);
-                  that.log.debug("Ozone density is: %s", pm10);
-                  break;
-              }
-              aqi = Math.max(aqi,parseFloat(observations[key]["AQI"]))
+            switch (that.sensor) {
+              case 'humidity':
+                that.log.debug('Current humidity is: %s%', that.conditions.humidity);
+                break;
+              case 'temperature':
+                that.log.debug('Current temperature is: %s°C (%s°F)', that.conditions.temperature, that.convertTemperature(that.conditions.temperature));
+                break;
+              case 'air_quality':
+              default:
+                that.log.debug('Current air quality index is: %s', that.conditions.aqi);
+                break;
             }
-            that.log.debug("Air quality index is: %s", aqi.toString());
 
-            that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, true);
-            that.log.debug("Active status is: true");
+            that.conditions.air_quality = that.convertAQI(that.conditions.aqi);
 
-            that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.noFault);
-            that.log.debug("Fault status is: no fault");
-          }
+            that.sensorService.setCharacteristic(Characteristic.StatusActive, true);
+            that.sensorService.setCharacteristic(Characteristic.StatusFault, this.noFault);
+            break;
+          case 'call_limit_reached':
+            that.log.error('Call limit reached');
+            break;
+          case 'api_key_expired':
+            that.log.error('API key expired');
+            break;
+          case 'incorrect_api_key':
+            that.log.error('Incorrect API key');
+            break;
+          case 'ip_location_failed':
+            that.log.error('IP location failed');
+            break;
+          case 'no_nearest_station':
+            that.log.error('No nearest station');
+            break;
+          case 'feature_not_available':
+            that.log.error('Feature not available');
+            break;
+          case 'too_many_requests':
+            that.log.error('Too many requests');
+            break;
+          default:
+            that.log.error('Unknown status');
+            break;
         }
-        else {
-          that.log.error("Unknown error from %s", that.providerProper);
+      } else {
+        that.log.error('Unknown error');
 
-          that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, false);
-          that.log.debug("Active status is: false");
-
-          that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
-          that.log.debug("Fault status is: general fault");
-        }
-        callback(that.convertAQI(aqi));
-      });
-    }
-    else if (this.provider == "aqicn") {
-      url = "http://api.waqi.info/feed/" + this.aqicn_city + "/?token=" + this.aqicn_api;
-
-      request({
-        url: url,
-        json: true
-      }, function (err, response, observations) {
-        if (!err && response.statusCode === 200 && observations.status == "ok" && observations.data.idx != "-1"){
-          aqi = parseFloat(observations.data.aqi);
-          that.log.debug("Air quality index is: %s", observations.data.aqi);
-
-          that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, true);
-          that.log.debug("Active status is: true");
-
-          that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.noFault);
-          that.log.debug("Fault status is: no fault");
-
-          
-          if (observations.data.iaqi.hasOwnProperty("o3")) {
-            var o3 = parseFloat(observations.data.iaqi.o3.v);
-            that.airQualitySensorService.setCharacteristic(Characteristic.OzoneDensity, o3);
-            that.log.debug("Ozone density is: %s", o3);
-          }
-          else {
-            that.airQualitySensorService.removeCharacteristic(Characteristic.OzoneDensity);
-          }
-
-          if (observations.data.iaqi.hasOwnProperty("no2")) {
-            var no2 = parseFloat(observations.data.iaqi.no2.v);
-            that.airQualitySensorService.setCharacteristic(Characteristic.NitrogenDioxideDensity, no2);
-            that.log.debug("Nitrogen dioxide density is: %s", no2);
-          }
-          else {
-            that.airQualitySensorService.removeCharacteristic(Characteristic.NitrogenDioxideDensity);
-          }
-
-          if (observations.data.iaqi.hasOwnProperty("so2")) {
-            var so2 = parseFloat(observations.data.iaqi.so2.v);
-            that.airQualitySensorService.setCharacteristic(Characteristic.SulphurDioxideDensity, so2);
-            that.log.debug("Sulphur dioxide density is: %s", so2);
-          }
-          else {
-            that.airQualitySensorService.removeCharacteristic(Characteristic.SulphurDioxideDensity);
-          }
-
-          if (observations.data.iaqi.hasOwnProperty("pm25")) {
-            var pm25 = parseFloat(observations.data.iaqi.pm25.v);
-            that.airQualitySensorService.setCharacteristic(Characteristic.PM2_5Density, pm25);
-            that.log.debug("PM2.5 density is: %s", pm25);
-          }
-          else {
-            that.airQualitySensorService.removeCharacteristic(Characteristic.PM2_5Density);
-          }
-
-          if (observations.data.iaqi.hasOwnProperty("pm10")) {
-            var pm10 = parseFloat(observations.data.iaqi.pm10.v);
-            that.airQualitySensorService.setCharacteristic(Characteristic.PM10Density, pm10);
-            that.log.debug("PM10 density is: %s", pm10);
-          }
-          else {
-            that.airQualitySensorService.removeCharacteristic(Characteristic.PM10Density);
-          }
-
-          if (observations.data.iaqi.hasOwnProperty("co")) {
-            var co = parseFloat(observations.data.iaqi.co.v);
-            that.airQualitySensorService.setCharacteristic(Characteristic.CarbonMonoxideLevel, co);
-            that.log.debug("Carbon monoxide level is: %s", co);
-          }
-          else {
-            that.airQualitySensorService.removeCharacteristic(Characteristic.CarbonMonoxideLevel);
-          }
-
-        }
-        else if (!err && observations.status == "error") {
-          that.log.error("Observation error: %s from %s", observations.data, that.providerProper);
-        }
-        else if (!err && observations.status == "ok" && observations.data.idx == "-1") {
-          that.log.error("Configuration error: Invalid city code from %s", that.providerProper);
-        }
-        else {
-          that.log.error("Unknown error from %s", that.providerProper);
-
-          that.airQualitySensorService.setCharacteristic(Characteristic.StatusActive, false);
-          that.log.debug("Active status is: false");
-
-          that.airQualitySensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
-          that.log.debug("Fault status is: general fault");
-        }
-        callback(that.convertAQI(aqi));
-      });
-    }
-*/
+        that.sensorService.setCharacteristic(Characteristic.StatusActive, true);
+        that.sensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
+      }
+      callback(that.conditions);
+    });
   },
 
   convertAQI: function (aqi) {
+    var characteristic;
     if (!aqi) {
-      return Characteristic.AirQuality.UNKNOWN;
+      characteristic = Characteristic.AirQuality.UNKNOWN;
+    } else if (aqi >= 201) {
+      characteristic = Characteristic.AirQuality.POOR;
+    } else if (aqi >= 151) {
+      characteristic = Characteristic.AirQuality.INFERIOR;
+    } else if (aqi >= 101) {
+      characteristic = Characteristic.AirQuality.FAIR;
+    } else if (aqi >= 51) {
+      characteristic = Characteristic.AirQuality.GOOD;
+    } else if (aqi >= 0) {
+      characteristic = Characteristic.AirQuality.EXCELLENT;
+    } else {
+      characteristic = Characteristic.AirQuality.UNKNOWN;
     }
-    else if (aqi >= 201) {
-      return Characteristic.AirQuality.POOR;
-    }
-    else if (aqi >= 151) {
-      return Characteristic.AirQuality.INFERIOR;
-    }
-    else if (aqi >= 101) {
-      return Characteristic.AirQuality.FAIR;
-    }
-    else if (aqi >= 51) {
-      return Characteristic.AirQuality.GOOD;
-    }
-    else if (aqi >= 0) {
-      return Characteristic.AirQuality.EXCELLENT;
-    }
-    else {
-      return Characteristic.AirQuality.UNKNOWN;
-    }
+    return characteristic;
+  },
+
+  convertTemperature: function (temperature) {
+    return (temperature * 1.8) + 32;
   },
 
   identify: function (callback) {
-    this.log.debug("Identified");
+    this.log.debug('Identified');
     callback();
   },
 
   getServices: function () {
-    var services = []
-    var accessoryInformationService = new Service.AccessoryInformation();
+    var services = [];
 
-    accessoryInformationService
-      .setCharacteristic(Characteristic.FirmwareRevision, require('./package.json').version || "Unknown")
-      .setCharacteristic(Characteristic.Manufacturer, "AirNow")
-      .setCharacteristic(Characteristic.Model, "Air Quality Sensor")
-      .setCharacteristic(Characteristic.SerialNumber, "Unknown"));
+    this.accessoryInformationService = new Service.AccessoryInformation();
 
-    services.push(accessoryInformationService);
+    this.accessoryInformationService
+      .setCharacteristic(Characteristic.FirmwareRevision, firmware)
+      .setCharacteristic(Characteristic.Manufacturer, 'AirVisual')
+      .setCharacteristic(Characteristic.Name, this.name)
+      .setCharacteristic(Characteristic.SerialNumber, this.serial);
 
-    this.airQualitySensorService = new Service.AirQualitySensor(this.name);
+    this.accessoryInformationService
+      .setCharacteristic(Characteristic.Identify)
+      .on('set', this.identify.bind(this));
 
-    this.airQualitySensorService
-      .getCharacteristic(Characteristic.AirQuality)
-      .on('get', this.getAirQuality.bind(this));
+    switch (this.sensor) {
+      case 'humidity':
+        this.model = 'Humidity Sensor';
+        this.sensorService = new Service.HumiditySensor();
+        this.sensorService
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .on('get', this.getHumidity.bind(this));
+        break;
+      case 'temperature':
+        this.model = 'Temperature Sensor';
+        this.sensorService = new Service.TemperatureSensor();
+        this.sensorService
+          .getCharacteristic(Characteristic.CurrentTemperature)
+          .on('get', this.getTemperature.bind(this));
+        break;
+      case 'air_quality':
+      default:
+        this.model = 'Air Quality Sensor';
+        this.sensorService = new Service.AirQualitySensor();
+        this.sensorService
+          .getCharacteristic(Characteristic.AirQuality)
+          .on('get', this.getAirQuality.bind(this));
+        break;
+    }
 
-    //this.airQualitySensorService.addCharacteristic(Characteristic.StatusActive);
-    //this.airQualitySensorService.addCharacteristic(Characteristic.StatusFault);
+    this.accessoryInformationService
+      .setCharacteristic(Characteristic.Model, this.model);
 
-    services.push(this.airQualitySensorService);
+    this.sensorService
+      .setCharacteristic(Characteristic.Name, this.name);
+
+    this.sensorService.addCharacteristic(Characteristic.StatusActive);
+    this.sensorService.addCharacteristic(Characteristic.StatusFault);
+
+    services.push(
+      this.accessoryInformationService,
+      this.sensorService
+    );
 
     return services;
   }
+};
+
+module.exports = function (homebridge) {
+  Service = homebridge.hap.Service;
+  Characteristic = homebridge.hap.Characteristic;
+  homebridge.registerAccessory('homebridge-airvisual', 'AirVisual', AirVisualAccessory);
 };
