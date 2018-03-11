@@ -1,5 +1,7 @@
 # homebridge-airvisual
 
+[![NPM Version](https://img.shields.io/npm/v/homebridge-airvisual.svg)](https://www.npmjs.com/package/homebridge-airvisual)
+
 Homebridge plugin for the AirVisual API
 
 ## Installation
