@@ -8,25 +8,42 @@ var Characteristic;
 
 function AirVisualAccessory(log, config) {
   this.log = log;
-
   this.name = config.name;
   this.key = config.api_key;
+  this.sensor = config.sensor || 'air_quality';
   this.standard = config.aqi_standard || 'us';
   this.latitude = config.latitude;
   this.longitude = config.longitude;
   this.city = config.city;
   this.state = config.state;
   this.country = config.country;
-  this.sensor = config.sensor || 'air_quality';
   this.polling = config.polling || false;
 
-  if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
-    this.log.error('Unsupported air quality standard specified, defaulting to US');
-    this.standard = 'us';
+  if (!this.key) {
+    throw new Error('API key not specified');
   }
   if (!(['air_quality', 'humidity', 'temperature'].indexOf(this.sensor) > -1)) {
     this.log.error('Unsupported sensor specified, defaulting to air quality');
     this.sensor = 'air_quality';
+  }
+  if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
+    this.log.error('Unsupported air quality standard specified, defaulting to US');
+    this.standard = 'us';
+  }
+  if ([this.latitude, this.longitude].indexOf(undefined) > -1) {
+    if (this.latitude || this.longitude) {
+      this.log.error('Incomplete GPS coordinates specified, defaulting to IP geolocation');
+      this.latitude = undefined;
+      this.longitude = undefined;
+    }
+  }
+  if ([this.city, this.state, this.country].indexOf(undefined) > -1) {
+    if (this.city || this.state || this.country) {
+      this.log.error('Incomplete city specified, defaulting to IP geolocation');
+      this.city = undefined;
+      this.state = undefined;
+      this.country = undefined;
+    }
   }
   if (!([true, false].indexOf(this.polling) > -1)) {
     this.log.error('Unsupported option specified for polling, defaulting to false');
@@ -56,9 +73,6 @@ function AirVisualAccessory(log, config) {
   }
 
   this.log.debug('Polling is %s', (this.polling) ? 'enabled' : 'disabled');
-
-  this.noFault = Characteristic.StatusFault.NO_FAULT; // 0
-  this.generalFault = Characteristic.StatusFault.GENERAL_FAULT; // 1
 
   this.conditions = {};
 }
@@ -136,66 +150,71 @@ AirVisualAccessory.prototype = {
       json: true
     }, function (error, response, data) {
       if (!error) {
-        switch (data.status) {
-          case 'success':
-            that.log.debug('City is: %s', data.data.city);
-            that.log.debug('State is: %s', data.data.state);
-            that.log.debug('Country is: %s', data.data.country);
-            that.log.debug('Latitude is: %s', data.data.location.coordinates[0]);
-            that.log.debug('Longitude is: %s', data.data.location.coordinates[1]);
+        switch (response.statusCode) {
+          case 200:
+            switch (data.status) {
+              case 'success':
+                that.log.debug('City is: %s', data.data.city);
+                that.log.debug('State is: %s', data.data.state);
+                that.log.debug('Country is: %s', data.data.country);
+                that.log.debug('Latitude is: %s', data.data.location.coordinates[0]);
+                that.log.debug('Longitude is: %s', data.data.location.coordinates[1]);
 
-            that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
-            that.conditions.humidity = parseFloat(data.data.current.weather.hu);
-            that.conditions.temperature = parseFloat(data.data.current.weather.tp);
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
+                that.conditions.humidity = parseFloat(data.data.current.weather.hu);
+                that.conditions.temperature = parseFloat(data.data.current.weather.tp);
 
-            switch (that.sensor) {
-              case 'humidity':
-                that.log.debug('Current humidity is: %s%', that.conditions.humidity);
+                switch (that.sensor) {
+                  case 'humidity':
+                    that.log.debug('Current humidity is: %s%', that.conditions.humidity);
+                    break;
+                  case 'temperature':
+                    that.log.debug('Current temperature is: %s°C (%s°F)', that.conditions.temperature, that.convertTemperature(that.conditions.temperature));
+                    break;
+                  case 'air_quality':
+                  default:
+                    that.log.debug('Current air quality index is: %s', that.conditions.aqi);
+                    break;
+                }
+
+                that.conditions.air_quality = that.convertAQI(that.conditions.aqi);
+
+                that.sensorService.getCharacteristic(Characteristic.StatusActive).setValue(true);
                 break;
-              case 'temperature':
-                that.log.debug('Current temperature is: %s°C (%s°F)', that.conditions.temperature, that.convertTemperature(that.conditions.temperature));
+              case 'call_limit_reached':
+                that.log.error('Call limit reached');
                 break;
-              case 'air_quality':
+              case 'api_key_expired':
+                that.log.error('API key expired');
+                break;
+              case 'incorrect_api_key':
+                that.log.error('Incorrect API key');
+                break;
+              case 'ip_location_failed':
+                that.log.error('IP location failed');
+                break;
+              case 'no_nearest_station':
+                that.log.error('No nearest station');
+                break;
+              case 'feature_not_available':
+                that.log.error('Feature not available');
+                break;
+              case 'too_many_requests':
+                that.log.error('Too many requests');
+                break;
               default:
-                that.log.debug('Current air quality index is: %s', that.conditions.aqi);
+                that.log.error('Unknown status: %s', data.status);
                 break;
             }
-
-            that.conditions.air_quality = that.convertAQI(that.conditions.aqi);
-
-            that.sensorService.setCharacteristic(Characteristic.StatusActive, true);
-            that.sensorService.setCharacteristic(Characteristic.StatusFault, this.noFault);
-            break;
-          case 'call_limit_reached':
-            that.log.error('Call limit reached');
-            break;
-          case 'api_key_expired':
-            that.log.error('API key expired');
-            break;
-          case 'incorrect_api_key':
-            that.log.error('Incorrect API key');
-            break;
-          case 'ip_location_failed':
-            that.log.error('IP location failed');
-            break;
-          case 'no_nearest_station':
-            that.log.error('No nearest station');
-            break;
-          case 'feature_not_available':
-            that.log.error('Feature not available');
-            break;
-          case 'too_many_requests':
-            that.log.error('Too many requests');
             break;
           default:
-            that.log.error('Unknown status');
+            that.log.error('Response: %s', response.statusCode);
+            that.sensorService.getCharacteristic(Characteristic.StatusActive).setValue(false);
             break;
         }
       } else {
         that.log.error('Unknown error');
-
-        that.sensorService.setCharacteristic(Characteristic.StatusActive, true);
-        that.sensorService.setCharacteristic(Characteristic.StatusFault, this.generalFault);
+        that.sensorService.getCharacteristic(Characteristic.StatusActive).setValue(false);
       }
       callback(that.conditions);
     });
@@ -277,7 +296,6 @@ AirVisualAccessory.prototype = {
       .setCharacteristic(Characteristic.Name, this.name);
 
     this.sensorService.addCharacteristic(Characteristic.StatusActive);
-    this.sensorService.addCharacteristic(Characteristic.StatusFault);
 
     services.push(
       this.accessoryInformationService,
