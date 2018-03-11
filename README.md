@@ -28,7 +28,7 @@ Example config.json:
     "city": "",
     "state": "",
     "country": "",
-    "polling": "false"
+    "polling": false
   }
 ],
 ```
@@ -47,7 +47,7 @@ Field | Required | Default | Description
 `city` | no | | See [**Location**](#location) notes below
 `state` | no | | See [**Location**](#location) notes below
 `country` | no | | See [**Location**](#location) notes below
-`polling` | no | `false` | Must be `true` or `false`
+`polling` | no | `false` | Must be `true` or `false` (must be a boolean, not a string)
 
 ## Location
 
