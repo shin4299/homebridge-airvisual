@@ -116,6 +116,12 @@ AirVisualAccessory.prototype = {
     });
   },
 
+ getPM25: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.aqi);
+    });
+  },
+  
   getHumidity: function (callback) {
     this.getData(function (conditions) {
       callback(null, conditions.humidity);
@@ -286,6 +292,9 @@ AirVisualAccessory.prototype = {
         this.sensorService
           .getCharacteristic(Characteristic.AirQuality)
           .on('get', this.getAirQuality.bind(this));
+        this.sensorService
+          .getCharacteristic(Characteristic.PM2_5Density)
+          .on('get', this.getPM25.bind(this));
         break;
     }
 
