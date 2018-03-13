@@ -383,11 +383,8 @@ AirVisualAccessory.prototype = {
           .getCharacteristic(Characteristic.OzoneDensity)
           .on('get', this.getO3.bind(this));
         this.sensorService
-        this.conditions.coo = parseFloat(data.data.current.pollution.co.conc);        
           .getCharacteristic(Characteristic.CarbonMonoxideLevel)
-                        .setValue(this.conditions.coo);
-//          .getCharacteristic(Characteristic.CarbonMonoxideLevel)
-//          .on('get', this.getCo.bind(this));
+          .on('get', this.getCo.bind(this));
         this.sensorService
           .getCharacteristic(Characteristic.NitrogenDioxideDensity)
           .on('get', this.getN2.bind(this));
