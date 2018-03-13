@@ -69,4 +69,4 @@ Alternatively, GPS coordinates (`latitude` and `longitude`) or a specific city (
 
 * Homebridge supports multiple instances for accessories; the configuration entry can be duplicated for each location and/or sensor type desired.
 
-* This plugin was developed for the "Community" (free) version of the AirVisual API; additional information is available from the "Startup" and "Enterprise" (paid) versions. Support for that additional information is planned but not yet implemented.
+* This plugin supports additional characteristics for air quality sensors if a "Startup" or "Enterprise" API key from AirVisual is used. However, that support is untested due to the prohibitive cost of the paid keys. If anyone has a paid API key and is willing to test, it would be much appreciated!
