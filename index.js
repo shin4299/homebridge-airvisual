@@ -121,6 +121,36 @@ AirVisualAccessory.prototype = {
       callback(null, conditions.aqi);
     });
   },
+ 
+ getPM10: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.p1);
+    });
+  },
+  
+ getCo: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.co);
+    });
+  },
+  
+ getO3: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.o3);
+    });
+  },
+  
+ getN2: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.n2);
+    });
+  },
+  
+ getS2: function (callback) {
+    this.getData(function (conditions) {
+      callback(null, conditions.s2);
+    });
+  },
   
   getHumidity: function (callback) {
     this.getData(function (conditions) {
@@ -160,16 +190,21 @@ AirVisualAccessory.prototype = {
           case 200:
             switch (data.status) {
               case 'success':
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
+                that.conditions.humidity = parseFloat(data.data.current.weather.hu);
+                that.conditions.temperature = parseFloat(data.data.current.weather.tp);
+                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
+                that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
+                that.conditions.n2 = parseFloat(data.data.current.pollution.n2.conc);
+                that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
+                that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
+                that.conditions.s2 = parseFloat(data.data.current.pollution.s2.conc);
+
                 that.log.debug('City is: %s', data.data.city);
                 that.log.debug('State is: %s', data.data.state);
                 that.log.debug('Country is: %s', data.data.country);
                 that.log.debug('Latitude is: %s', data.data.location.coordinates[0]);
                 that.log.debug('Longitude is: %s', data.data.location.coordinates[1]);
-
-                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
-                that.conditions.humidity = parseFloat(data.data.current.weather.hu);
-                that.conditions.temperature = parseFloat(data.data.current.weather.tp);
-
                 switch (that.sensor) {
                   case 'humidity':
                     that.log.debug('Current humidity is: %s%', that.conditions.humidity);
@@ -180,12 +215,53 @@ AirVisualAccessory.prototype = {
                   case 'air_quality':
                   default:
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
+                    if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
+                      that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
+                      that.log.debug('Current carbon monoxide level is: %s%s', that.conditions.co, data.data.units.co);
+                      that.sensorService
+                        .getCharacteristic(Characteristic.CarbonMonoxideLevel)
+                        .setValue(that.conditions.co);
+                    }
+                    if (data.data.current.pollution.n2 && data.data.units.n2 === 'ugm3') {
+                      that.conditions.n2 = parseFloat(data.data.current.pollution.n2.conc);
+                      that.log.debug('Current nitrogen dioxide density is: %s%s', that.conditions.n2, data.data.units.n2);
+                      that.sensorService
+                        .getCharacteristic(Characteristic.NitrogenDioxideDensity)
+                        .setValue(that.conditions.n2);
+                    }
+                    if (data.data.current.pollution.o3 && data.data.units.o3 === 'ugm3') {
+                      that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
+                      that.log.debug('Current ozone density is: %s%s', that.conditions.o3, data.data.units.o3);
+                      that.sensorService
+                        .getCharacteristic(Characteristic.OzoneDensity)
+                        .setValue(that.conditions.o3);
+                    }
+                    if (data.data.current.pollution.p1 && data.data.units.p1 === 'ugm3') {
+                      that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
+                      that.log.debug('Current PM10 density is: %s%s', that.conditions.pm10, data.data.units.p1);
+                      that.sensorService
+                        .getCharacteristic(Characteristic.PM10Density)
+                        .setValue(that.conditions.pm10);
+                    }
+                    if (data.data.current.pollution.p2 && data.data.units.p2 === 'ugm3') {
+                      that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
+                      that.log.debug('Current PM2.5 density is: %s%s', that.conditions.pm2_5, data.data.units.p2);
+                      that.sensorService
+                        .getCharacteristic(Characteristic.PM2_5Density)
+                        .setValue(that.conditions.pm2_5);
+                    }
+                    if (data.data.current.pollution.s2 && data.data.units.s2 === 'ugm3') {
+                      that.conditions.s2 = parseFloat(data.data.current.pollution.s2.conc);
+                      that.log.debug('Current sulphur dioxide density is: %s%s', that.conditions.s2, data.data.units.s2);
+                      that.sensorService
+                        .getCharacteristic(Characteristic.SulphurDioxideDensity)
+                        .setValue(that.conditions.s2);
+                    }
                     break;
                 }
-
-                that.conditions.air_quality = that.convertAQI(that.conditions.aqi);
-
-                that.sensorService.getCharacteristic(Characteristic.StatusActive).setValue(true);
+                that.sensorService
+                  .getCharacteristic(Characteristic.StatusActive)
+                  .setValue(true);
                 break;
               case 'call_limit_reached':
                 that.log.error('Call limit reached');
@@ -215,16 +291,21 @@ AirVisualAccessory.prototype = {
             break;
           default:
             that.log.error('Response: %s', response.statusCode);
-            that.sensorService.getCharacteristic(Characteristic.StatusActive).setValue(false);
+            that.sensorService
+              .getCharacteristic(Characteristic.StatusActive)
+              .setValue(false);
             break;
         }
       } else {
-        that.log.error('Unknown error');
-        that.sensorService.getCharacteristic(Characteristic.StatusActive).setValue(false);
+        that.log.error('Unknown error: %s', error);
+        that.sensorService
+          .getCharacteristic(Characteristic.StatusActive)
+          .setValue(false);
       }
       callback(that.conditions);
     });
   },
+
 
   convertAQI: function (aqi) {
     var characteristic;
@@ -295,6 +376,21 @@ AirVisualAccessory.prototype = {
         this.sensorService
           .getCharacteristic(Characteristic.PM2_5Density)
           .on('get', this.getPM25.bind(this));
+        this.sensorService
+          .getCharacteristic(Characteristic.PM10Density)
+          .on('get', this.getPM10.bind(this));
+        this.sensorService
+          .getCharacteristic(Characteristic.OzoneDensity)
+          .on('get', this.getO3.bind(this));
+        this.sensorService
+          .getCharacteristic(Characteristic.CarbonMonoxideLevel)
+          .on('get', this.getCo.bind(this));
+        this.sensorService
+          .getCharacteristic(Characteristic.NitrogenDioxideDensity)
+          .on('get', this.getN2.bind(this));
+        this.sensorService
+          .getCharacteristic(Characteristic.SulphurDioxideDensity)
+          .on('get', this.getS2.bind(this));
         break;
     }
 
