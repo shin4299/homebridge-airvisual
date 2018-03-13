@@ -193,12 +193,12 @@ AirVisualAccessory.prototype = {
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
                 that.conditions.humidity = parseFloat(data.data.current.weather.hu);
                 that.conditions.temperature = parseFloat(data.data.current.weather.tp);
-                that.conditions.co = parseFloat(data.data.current.pollution.co);
+                /*that.conditions.co = parseFloat(data.data.current.pollution.co);
                 that.conditions.n2 = parseFloat(data.data.current.pollution.n2);
                 that.conditions.o3 = parseFloat(data.data.current.pollution.o3);
                 that.conditions.pm10 = parseFloat(data.data.current.pollution.p1);
                 that.conditions.s2 = parseFloat(data.data.current.pollution.s2);
-                that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2);
+                that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2);*/
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
                 that.log.debug('City is: %s', data.data.city);
                 that.log.debug('State is: %s', data.data.state);
@@ -215,7 +215,7 @@ AirVisualAccessory.prototype = {
                   case 'air_quality':
                   default:
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
-                    /*if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
+                    if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
                       that.log.debug('Current carbon monoxide level is: %s%s', that.conditions.co, data.data.units.co);
                       that.sensorService
@@ -256,7 +256,7 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.SulphurDioxideDensity)
                         .setValue(that.conditions.s2);
-                    }*/
+                    }
                     break;
                 }
                 that.sensorService
