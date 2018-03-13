@@ -198,8 +198,8 @@ AirVisualAccessory.prototype = {
                 that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
                 that.conditions.pm10 = parseFloat(data.data.current.pollution.p1);
                 that.conditions.s2 = parseFloat(data.data.current.pollution.s2);*/
-                that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
-                that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
+                that.conditions.co = parseFloat(data.data.current.pollution.co);
+                that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
                 that.log.debug('City is: %s', data.data.city);
                 that.log.debug('State is: %s', data.data.state);
