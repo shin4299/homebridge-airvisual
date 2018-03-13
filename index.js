@@ -118,7 +118,7 @@ AirVisualAccessory.prototype = {
 
  getPM25: function (callback) {
     this.getData(function (conditions) {
-      callback(null, conditions.pm2_5);
+      callback(null, conditions.aqi);
     });
   },
  
