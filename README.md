@@ -1,5 +1,7 @@
 # homebridge-airvisual
 
+[![NPM Version](https://img.shields.io/npm/v/homebridge-airvisual.svg)](https://www.npmjs.com/package/homebridge-airvisual)
+
 Homebridge plugin for the AirVisual API
 
 ## Installation
@@ -26,7 +28,7 @@ Example config.json:
     "city": "",
     "state": "",
     "country": "",
-    "polling": "false"
+    "polling": false
   }
 ],
 ```
@@ -40,12 +42,12 @@ Field | Required | Default | Description
 `api_key` | yes | | Obtain from https://www.airvisual.com/api
 `sensor` | no | `air_quality` | Must be `air_quality`, `humidity`, or `temperature`
 `aqi_standard` | no | `us` | Only applicable if `sensor` is set to `air_quality`, must be `cn` (for China) or `us` (for United States) 
-`latitude` | no | | See **Location** notes below
-`longitude` | no | | See **Location** notes below
-`city` | no | | See **Location** notes below
-`state` | no | | See **Location** notes below
-`country` | no | | See **Location** notes below
-`polling` | no | `false` | Must be `true` or `false`
+`latitude` | no | | See [**Location**](#location) notes below
+`longitude` | no | | See [**Location**](#location) notes below
+`city` | no | | See [**Location**](#location) notes below
+`state` | no | | See [**Location**](#location) notes below
+`country` | no | | See [**Location**](#location) notes below
+`polling` | no | `false` | Must be `true` or `false` (must be a boolean, not a string)
 
 ## Location
 
