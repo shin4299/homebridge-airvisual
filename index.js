@@ -195,10 +195,10 @@ AirVisualAccessory.prototype = {
                 that.conditions.temperature = parseFloat(data.data.current.weather.tp);
                 /*that.conditions.co = parseFloat(data.data.current.pollution.co);
                 that.conditions.n2 = parseFloat(data.data.current.pollution.n2);
-                that.conditions.o3 = parseFloat(data.data.current.pollution.o3);
                 that.conditions.pm10 = parseFloat(data.data.current.pollution.p1);
-                that.conditions.s2 = parseFloat(data.data.current.pollution.s2);
-                that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2);*/
+                that.conditions.s2 = parseFloat(data.data.current.pollution.s2);*/
+                that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
+                that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
                 that.log.debug('City is: %s', data.data.city);
                 that.log.debug('State is: %s', data.data.state);
@@ -215,13 +215,13 @@ AirVisualAccessory.prototype = {
                   case 'air_quality':
                   default:
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
-                    if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
+                    /*if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
                       that.log.debug('Current carbon monoxide level is: %s%s', that.conditions.co, data.data.units.co);
                       that.sensorService
                         .getCharacteristic(Characteristic.CarbonMonoxideLevel)
                         .setValue(that.conditions.co);
-                    }
+                    }*/
                     if (data.data.current.pollution.n2 && data.data.units.n2 === 'ugm3') {
                       that.conditions.n2 = parseFloat(data.data.current.pollution.n2.conc);
                       that.log.debug('Current nitrogen dioxide density is: %s%s', that.conditions.n2, data.data.units.n2);
@@ -243,13 +243,13 @@ AirVisualAccessory.prototype = {
                         .getCharacteristic(Characteristic.PM10Density)
                         .setValue(that.conditions.pm10);
                     }
-                    if (data.data.current.pollution.p2 && data.data.units.p2 === 'ugm3') {
+                    /*if (data.data.current.pollution.p2 && data.data.units.p2 === 'ugm3') {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
                       that.log.debug('Current PM2.5 density is: %s%s', that.conditions.pm2_5, data.data.units.p2);
                       that.sensorService
                         .getCharacteristic(Characteristic.PM2_5Density)
                         .setValue(that.conditions.pm2_5);
-                    }
+                    }*/
                     if (data.data.current.pollution.s2 && data.data.units.s2 === 'ugm3') {
                       that.conditions.s2 = parseFloat(data.data.current.pollution.s2.conc);
                       that.log.debug('Current sulphur dioxide density is: %s%s', that.conditions.s2, data.data.units.s2);
@@ -383,8 +383,11 @@ AirVisualAccessory.prototype = {
           .getCharacteristic(Characteristic.OzoneDensity)
           .on('get', this.getO3.bind(this));
         this.sensorService
+        this.conditions.coo = parseFloat(data.data.current.pollution.co.conc);        
           .getCharacteristic(Characteristic.CarbonMonoxideLevel)
-          .on('get', this.getCo.bind(this));
+                        .setValue(this.conditions.coo);
+//          .getCharacteristic(Characteristic.CarbonMonoxideLevel)
+//          .on('get', this.getCo.bind(this));
         this.sensorService
           .getCharacteristic(Characteristic.NitrogenDioxideDensity)
           .on('get', this.getN2.bind(this));
