@@ -215,7 +215,7 @@ AirVisualAccessory.prototype = {
                   case 'air_quality':
                   default:
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
-                    if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
+                    /*if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
                       that.log.debug('Current carbon monoxide level is: %s%s', that.conditions.co, data.data.units.co);
                       that.sensorService
@@ -256,7 +256,7 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.SulphurDioxideDensity)
                         .setValue(that.conditions.s2);
-                    }
+                    }*/
                     break;
                 }
                 that.sensorService
