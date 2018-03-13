@@ -66,7 +66,7 @@ function AirVisualAccessory(log, config) {
 
   if (this.polling) {
     var that = this;
-    this.interval = 10 * 60000;
+    this.interval = 60 * 60000;
     setTimeout(function () {
       that.servicePolling();
     }, this.interval);
@@ -307,7 +307,7 @@ AirVisualAccessory.prototype = {
   },
 
 
-  convertAQI: function (aqi) {
+  convertAirQuality: function (aqi) {
     var characteristic;
     if (!aqi) {
       characteristic = Characteristic.AirQuality.UNKNOWN;
@@ -400,7 +400,8 @@ AirVisualAccessory.prototype = {
     this.sensorService
       .setCharacteristic(Characteristic.Name, this.name);
 
-    this.sensorService.addCharacteristic(Characteristic.StatusActive);
+    this.sensorService
+      .addCharacteristic(Characteristic.StatusActive);
 
     services.push(
       this.accessoryInformationService,
