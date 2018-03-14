@@ -183,6 +183,13 @@ AirVisualAccessory.prototype = {
         break;
     }
 request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, data, response) {
+                that.conditions.aqi = parseFloat(12);
+                that.conditions.n2 = parseFloat(14);
+                that.conditions.o3 = parseFloat(4);
+                that.conditions.pm10 = parseFloat(34);
+                that.conditions.s2 = parseFloat(33);
+                that.conditions.co = parseFloat(3);
+                that.conditions.pm2_5 = parseFloat(7);
       
   console.log('error:', error); // Print the error if one occurred
   console.log('data', data); // Print the response status code if a response was received
