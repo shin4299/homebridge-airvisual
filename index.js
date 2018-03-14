@@ -57,7 +57,7 @@ function AirVisualAccessory(log, config) {
   } else if (this.city && this.state && this.country) {
     this.log.debug('Using specified city');
     this.mode = 'city';
-    this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
+    this.serial = String(that.conditions.pm2_5); //this.city + ', ' + this.state + ', ' + this.country);
   } else {
     this.log.debug('Using IP geolocation');
     this.mode = 'ip';
@@ -405,7 +405,7 @@ AirVisualAccessory.prototype = {
       .setCharacteristic(Characteristic.FirmwareRevision, firmware)
       .setCharacteristic(Characteristic.Manufacturer, 'AirVisual')
       .setCharacteristic(Characteristic.Name, this.name)
-      .setCharacteristic(Characteristic.SerialNumber, conditions.pm2_5);  //this.serial
+      .setCharacteristic(Characteristic.SerialNumber, this.serial);  //
 
     this.accessoryInformationService
       .setCharacteristic(Characteristic.Identify)
