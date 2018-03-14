@@ -165,7 +165,7 @@ AirVisualAccessory.prototype = {
   },
 
   
-  getData: function (callback) {
+/*  getData: function (callback) {
     var that = this;
     var url;
 
@@ -218,7 +218,7 @@ AirVisualAccessory.prototype = {
                 that.conditions.s2 = parseFloat(0.02);
                 that.conditions.co = parseFloat(20);
                 that.conditions.pm2_5 = parseFloat(8);
-                that.test = string(response);*/
+                that.test = string(response);
                 
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
@@ -227,10 +227,10 @@ AirVisualAccessory.prototype = {
             
 
   },
-
+*/
   
   
-/*  
+  
   getData: function (callback) {
     var that = this;
     var url;
@@ -372,7 +372,7 @@ AirVisualAccessory.prototype = {
       callback(that.conditions);
     });
   },
-*/
+
 
   convertAirQuality: function (aqi) {
     var characteristic;
