@@ -57,7 +57,7 @@ function AirVisualAccessory(log, config) {
   } else if (this.city && this.state && this.country) {
     this.log.debug('Using specified city');
     this.mode = 'city';
-    this.serial = String(that.conditions.pm2_5); //this.city + ', ' + this.state + ', ' + this.country);
+    this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
   } else {
     this.log.debug('Using IP geolocation');
     this.mode = 'ip';
@@ -189,7 +189,14 @@ AirVisualAccessory.prototype = {
       url: url,
       json: true
     }, function (error, data, response) {
-                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.numOfRows : data.numOfRows);
+                that.conditions.n2 = parseFloat(data.numOfRows);
+                that.conditions.o3 = parseFloat(data.numOfRows);
+                that.conditions.pm10 = parseFloat(data.ver);
+                that.conditions.s2 = parseFloat(data.ver);
+                that.conditions.co = parseFloat(data.pageNo);
+                that.conditions.pm2_5 = parseFloat(data.pageNo);
+/*                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
                 that.conditions.n2 = parseFloat(data.no2Value);
                 that.conditions.o3 = parseFloat(data.o3Value);
                 that.conditions.pm10 = parseFloat(data.pm10Value);
@@ -197,7 +204,7 @@ AirVisualAccessory.prototype = {
                 that.conditions.co = parseFloat(data.coValue);
                 that.conditions.pm2_5 = string(data.pm25Value);
 /*                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.parm.numOfRows : data.parm.numOfRows);
-                that.conditions.n2 = parseFloat(data.parm.rnum);
+                that.conditions.n2 = parseFloat(data.parm.rnum);numOfRows
                 that.conditions.o3 = parseFloat(data.parm.rnum);
                 that.conditions.pm10 = parseFloat(data.parm.pageNo);
                 that.conditions.s2 = parseFloat(data.parm.pageNo);
