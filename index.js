@@ -204,7 +204,7 @@ AirVisualAccessory.prototype = {
                 that.conditions.s2 = parseFloat(0.02);
                 that.conditions.co = parseFloat(20);
                 that.conditions.pm2_5 = parseFloat(8);
-                this.test = string(response);
+                that.test = string(response);
                 
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
@@ -398,7 +398,7 @@ AirVisualAccessory.prototype = {
       .setCharacteristic(Characteristic.FirmwareRevision, firmware)
       .setCharacteristic(Characteristic.Manufacturer, 'AirVisual')
       .setCharacteristic(Characteristic.Name, this.name)
-      .setCharacteristic(Characteristic.SerialNumber, this.test);  //this.serial
+      .setCharacteristic(Characteristic.SerialNumber, that.test);  //this.serial
 
     this.accessoryInformationService
       .setCharacteristic(Characteristic.Identify)
