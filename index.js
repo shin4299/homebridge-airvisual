@@ -188,7 +188,7 @@ AirVisualAccessory.prototype = {
     request({
       url: url,
       json: true
-    }, function (data, error, response) {
+    }, function (error, data, response) {
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.parm.numOfRows : data.parm.numOfRows);
                 that.conditions.n2 = parseFloat(data.parm.rnum);
                 that.conditions.o3 = parseFloat(data.parm.rnum);
