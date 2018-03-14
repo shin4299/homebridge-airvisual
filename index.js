@@ -198,12 +198,14 @@ AirVisualAccessory.prototype = {
                 that.conditions.pm2_5 = parseFloat(data.parm.pageNo);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);*/
                 that.conditions.aqi = parseFloat(50);
-                that.conditions.n2 = parseFloat(error);
-                that.conditions.o3 = parseFloat(response);
-                that.conditions.pm10 = parseFloat(data);
+                that.conditions.n2 = parseFloat(3);
+                that.conditions.o3 = parseFloat(20);
+                that.conditions.pm10 = parseFloat(5);
                 that.conditions.s2 = parseFloat(0.02);
                 that.conditions.co = parseFloat(20);
                 that.conditions.pm2_5 = parseFloat(8);
+                that.conditions.e = string(response);
+                
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
       
@@ -396,7 +398,7 @@ AirVisualAccessory.prototype = {
       .setCharacteristic(Characteristic.FirmwareRevision, firmware)
       .setCharacteristic(Characteristic.Manufacturer, 'AirVisual')
       .setCharacteristic(Characteristic.Name, this.name)
-      .setCharacteristic(Characteristic.SerialNumber, this.serial);
+      .setCharacteristic(Characteristic.SerialNumber, that.conditions.e);  //this.serial
 
     this.accessoryInformationService
       .setCharacteristic(Characteristic.Identify)
