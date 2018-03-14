@@ -165,7 +165,7 @@ AirVisualAccessory.prototype = {
   },
 
   
-/*  getData: function (callback) {
+  getData: function (callback) {
     var that = this;
     var url;
 
@@ -182,8 +182,14 @@ AirVisualAccessory.prototype = {
         url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
         break;
     }
-
-    
+request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, data, response) {
+      
+  console.log('error:', error); // Print the error if one occurred
+  console.log('data', data); // Print the response status code if a response was received
+  console.log('respose:', response); // Print the HTML for the Google homepage.
+    });
+  }
+/*    
 //    request( url, function(error, response, data) {
     request({
       url: url,
@@ -231,7 +237,7 @@ AirVisualAccessory.prototype = {
   
   
   
-  getData: function (callback) {
+/*  getData: function (callback) {
     var that = this;
     var url;
 
@@ -372,7 +378,7 @@ AirVisualAccessory.prototype = {
       callback(that.conditions);
     });
   },
-
+*/
 
   convertAirQuality: function (aqi) {
     var characteristic;
