@@ -189,7 +189,7 @@ AirVisualAccessory.prototype = {
       url: url,
       json: true
     }, function (error, data, response) {
-                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.list[].khaiValue : data.list[].khaiValue);
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.list.khaiValue : data.list.khaiValue);
                 that.conditions.n2 = parseFloat(data.list[0].no2Value);
                 that.conditions.o3 = parseFloat(data.list[0].o3Value);
                 that.conditions.pm10 = parseFloat(data.list[0].pm10Value);
