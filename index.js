@@ -188,23 +188,23 @@ AirVisualAccessory.prototype = {
     request({
       url: url,
       json: true
-    }, function (error, response, data) {
-/*                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.parm.numOfRows : data.parm.numOfRows);
+    }, function (data, error, response) {
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.parm.numOfRows : data.parm.numOfRows);
                 that.conditions.n2 = parseFloat(data.parm.rnum);
                 that.conditions.o3 = parseFloat(data.parm.rnum);
                 that.conditions.pm10 = parseFloat(data.parm.pageNo);
                 that.conditions.s2 = parseFloat(data.parm.pageNo);
                 that.conditions.co = parseFloat(data.parm.pageNo);
                 that.conditions.pm2_5 = parseFloat(data.parm.pageNo);
-                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);*/
-                that.conditions.aqi = parseFloat(50);
+                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
+              /*  that.conditions.aqi = parseFloat(50);
                 that.conditions.n2 = parseFloat(3);
                 that.conditions.o3 = parseFloat(20);
                 that.conditions.pm10 = parseFloat(5);
                 that.conditions.s2 = parseFloat(0.02);
                 that.conditions.co = parseFloat(20);
                 that.conditions.pm2_5 = parseFloat(8);
-                that.test = string(response);
+                that.test = string(response);*/
                 
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
@@ -398,7 +398,7 @@ AirVisualAccessory.prototype = {
       .setCharacteristic(Characteristic.FirmwareRevision, firmware)
       .setCharacteristic(Characteristic.Manufacturer, 'AirVisual')
       .setCharacteristic(Characteristic.Name, this.name)
-      .setCharacteristic(Characteristic.SerialNumber, that.test);  //this.serial
+      .setCharacteristic(Characteristic.SerialNumber, this.serial);  //
 
     this.accessoryInformationService
       .setCharacteristic(Characteristic.Identify)
