@@ -164,6 +164,47 @@ AirVisualAccessory.prototype = {
     });
   },
 
+  
+  getData: function (callback) {
+    var that = this;
+    var url;
+
+    switch (that.mode) {
+      case 'gps':
+        url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
+        break;
+      case 'city': 
+        url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
+        
+        break;
+      case 'ip':
+      default:
+        url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
+        break;
+    }
+
+    
+//    request( url, function(error, response, data) {
+    request({
+      url: url,
+      json: true
+    }, function (error, response, data) {
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.list[0].khaiValue : data.list[0].khaiValue);
+                that.conditions.n2 = parseFloat(data.list[0].no2Value);
+                that.conditions.o3 = parseFloat(data.list[0].o3Value);
+                that.conditions.pm10 = parseFloat(data.list[0].pm10Value);
+                that.conditions.s2 = parseFloat(data.list[0].so2Value);
+                that.conditions.co = parseFloat(data.list[0].coValue);
+                that.conditions.pm2_5 = parseFloat(data.list[0].pm25Value);
+                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
+      
+    });
+            
+
+  },
+  
+  
+/*  
   getData: function (callback) {
     var that = this;
     var url;
@@ -193,11 +234,10 @@ AirVisualAccessory.prototype = {
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
                 that.conditions.humidity = parseFloat(data.data.current.weather.hu);
                 that.conditions.temperature = parseFloat(data.data.current.weather.tp);
-                /*
                 that.conditions.n2 = parseFloat(data.data.current.pollution.n2);
                 that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
                 that.conditions.pm10 = parseFloat(data.data.current.pollution.p1);
-                that.conditions.s2 = parseFloat(data.data.current.pollution.s2);*/
+                that.conditions.s2 = parseFloat(data.data.current.pollution.s2);
                 that.conditions.co = parseFloat(data.data.current.pollution.co);
                 that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
@@ -216,13 +256,13 @@ AirVisualAccessory.prototype = {
                   case 'air_quality':
                   default:
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
-                    /*if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
+                    if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
                       that.log.debug('Current carbon monoxide level is: %s%s', that.conditions.co, data.data.units.co);
                       that.sensorService
                         .getCharacteristic(Characteristic.CarbonMonoxideLevel)
                         .setValue(that.conditions.co);
-                    }*/
+                    }
                     if (data.data.current.pollution.n2 && data.data.units.n2 === 'ugm3') {
                       that.conditions.n2 = parseFloat(data.data.current.pollution.n2.conc);
                       that.log.debug('Current nitrogen dioxide density is: %s%s', that.conditions.n2, data.data.units.n2);
@@ -244,13 +284,13 @@ AirVisualAccessory.prototype = {
                         .getCharacteristic(Characteristic.PM10Density)
                         .setValue(that.conditions.pm10);
                     }
-                    /*if (data.data.current.pollution.p2 && data.data.units.p2 === 'ugm3') {
+                    if (data.data.current.pollution.p2 && data.data.units.p2 === 'ugm3') {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
                       that.log.debug('Current PM2.5 density is: %s%s', that.conditions.pm2_5, data.data.units.p2);
                       that.sensorService
                         .getCharacteristic(Characteristic.PM2_5Density)
                         .setValue(that.conditions.pm2_5);
-                    }*/
+                    }
                     if (data.data.current.pollution.s2 && data.data.units.s2 === 'ugm3') {
                       that.conditions.s2 = parseFloat(data.data.current.pollution.s2.conc);
                       that.log.debug('Current sulphur dioxide density is: %s%s', that.conditions.s2, data.data.units.s2);
@@ -306,7 +346,7 @@ AirVisualAccessory.prototype = {
       callback(that.conditions);
     });
   },
-
+*/
 
   convertAirQuality: function (aqi) {
     var characteristic;
