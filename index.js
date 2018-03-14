@@ -118,7 +118,7 @@ AirVisualAccessory.prototype = {
 
  getPM25: function (callback) {
     this.getData(function (conditions) {
-      callback(null, conditions.aqi);
+      callback(null, conditions.pm2_5);
     });
   },
  
@@ -190,12 +190,12 @@ AirVisualAccessory.prototype = {
       json: true
     }, function (error, data, response) {
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
-                that.conditions.n2 = parseFloat(data.list[0].no2Value);
-                that.conditions.o3 = parseFloat(data.list[0].o3Value);
-                that.conditions.pm10 = parseFloat(data.list[0].pm10Value);
-                that.conditions.s2 = parseFloat(data.list[0].so2Value);
-                that.conditions.co = parseFloat(data.list[0].coValue);
-                that.conditions.pm2_5 = parseFloat(data.list[0].pm25Value);
+                that.conditions.n2 = parseFloat(data.no2Value);
+                that.conditions.o3 = parseFloat(data.o3Value);
+                that.conditions.pm10 = parseFloat(data.pm10Value);
+                that.conditions.s2 = parseFloat(data.so2Value);
+                that.conditions.co = parseFloat(data.coValue);
+                that.conditions.pm2_5 = parseFloat(data.pm25Value);
 /*                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.parm.numOfRows : data.parm.numOfRows);
                 that.conditions.n2 = parseFloat(data.parm.rnum);
                 that.conditions.o3 = parseFloat(data.parm.rnum);
