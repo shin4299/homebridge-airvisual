@@ -171,102 +171,6 @@ AirVisualAccessory.prototype = {
 
     switch (that.mode) {
       case 'gps':
-        url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
-        break;
-      case 'city': 
-        url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
-        
-        break;
-      case 'ip':
-      default:
-        url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
-        break;
-    }
-//request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0', function(error, response, data) {
-request({
-      url: 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0',
-    method: 'PUT',
-    preambleCRLF: true,
-    postambleCRLF: true,
-
-    // alternatively pass an object containing additional options
-    multipart: [
-      {
-        'content-type': 'application/json',
-        data: JSON.stringify({foo: 'bar', _attachments: {'message.txt': {follows: true, length: 18, 'content_type': 'text/plain' }}})
-      }
-    ]
-  },
-     function (error, response, data) {
-  console.log('error:', error); // Print the error if one occurred
-  console.log('data', data); // Print the response status code if a response was received
-//  console.log('response:', response); // Print the HTML for the Google homepage.
-
-                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.list[0].khaiValue : data.list[0].khaiValue);
-                that.conditions.n2 = parseFloat(data.list[0].no2Value);
-                that.conditions.o3 = parseFloat(data.list[0].o3Value);
-                that.conditions.pm10 = parseFloat(data.list[0].pm10Value);
-                that.conditions.s2 = parseFloat(data.list[0].so2Value);
-                that.conditions.co = parseFloat(data.list[0].coValue);
-                that.conditions.pm2_5 = string(data.list[0].pm25Value);
-                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
-
-    });
-  },
-/*    
-//    request( url, function(error, response, data) {
-    request({
-      url: url,
-      json: true
-    }, function (error, data, response) {
-                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.numOfRows : data.numOfRows);
-                that.conditions.n2 = parseFloat(data.numOfRows);
-                that.conditions.o3 = parseFloat(data.numOfRows);
-                that.conditions.pm10 = parseFloat(data.ver);
-                that.conditions.s2 = parseFloat(data.ver);
-                that.conditions.co = parseFloat(data.pageNo);
-                that.conditions.pm2_5 = parseFloat(data.pageNo);
-/*                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
-                that.conditions.n2 = parseFloat(data.no2Value);
-                that.conditions.o3 = parseFloat(data.o3Value);
-                that.conditions.pm10 = parseFloat(data.pm10Value);
-                that.conditions.s2 = parseFloat(data.so2Value);
-                that.conditions.co = parseFloat(data.coValue);
-                that.conditions.pm2_5 = string(data.pm25Value);
-/*                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.parm.numOfRows : data.parm.numOfRows);
-                that.conditions.n2 = parseFloat(data.parm.rnum);numOfRows
-                that.conditions.o3 = parseFloat(data.parm.rnum);
-                that.conditions.pm10 = parseFloat(data.parm.pageNo);
-                that.conditions.s2 = parseFloat(data.parm.pageNo);
-                that.conditions.co = parseFloat(data.parm.pageNo);
-                that.conditions.pm2_5 = parseFloat(data.parm.pageNo);
-                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
-                that.conditions.aqi = parseFloat(50);
-                that.conditions.n2 = parseFloat(3);
-                that.conditions.o3 = parseFloat(20);
-                that.conditions.pm10 = parseFloat(5);
-                that.conditions.s2 = parseFloat(0.02);
-                that.conditions.co = parseFloat(20);
-                that.conditions.pm2_5 = parseFloat(8);
-                that.test = string(response);
-                
-                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
-
-      
-    });
-            
-
-  },
-*/
-  
-  
-  
-/*  getData: function (callback) {
-    var that = this;
-    var url;
-
-    switch (that.mode) {
-      case 'gps':
         url = 'https://api.airvisual.com/v2/nearest_city?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
         break;
       case 'city':
@@ -405,7 +309,7 @@ request({
       callback(that.conditions);
     });
   },
-*/
+
 
   convertAirQuality: function (aqi) {
     var characteristic;
