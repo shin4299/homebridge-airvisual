@@ -193,8 +193,8 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
 //  console.log('error:', error); // Print the error if one occurred
-  console.log('data', data); // Print the response status code if a response was received
-//  console.log('response:', response); // Print the HTML for the Google homepage.
+//  console.log('data', data); // Print the response status code if a response was received
+  console.log('response:', response); // Print the HTML for the Google homepage.
     });
   },
 /*    
