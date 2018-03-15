@@ -182,19 +182,22 @@ AirVisualAccessory.prototype = {
         url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
         break;
     }
-request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, data, response) {
-                that.conditions.aqi = parseFloat(12);
-                that.conditions.n2 = parseFloat(14);
-                that.conditions.o3 = parseFloat(4);
-                that.conditions.pm10 = parseFloat(34);
-                that.conditions.s2 = parseFloat(33);
-                that.conditions.co = parseFloat(3);
-                that.conditions.pm2_5 = parseFloat(7);
+request({
+      url: url,
+      json: true
+    }, function (error, data, response) {
+                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
+                that.conditions.n2 = parseFloat(data.no2Value);
+                that.conditions.o3 = parseFloat(data.o3Value);
+                that.conditions.pm10 = parseFloat(data.pm10Value);
+                that.conditions.s2 = parseFloat(data.so2Value);
+                that.conditions.co = parseFloat(data.coValue);
+                that.conditions.pm2_5 = string(data.pm25Value);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
   console.log('error:', error); // Print the error if one occurred
   console.log('data', data); // Print the response status code if a response was received
-  console.log('respose:', response); // Print the HTML for the Google homepage.
+  console.log('response:', response); // Print the HTML for the Google homepage.
     });
   }
 /*    
