@@ -164,7 +164,7 @@ AirVisualAccessory.prototype = {
     });
   },
 
-  /*
+  
   getData: function (callback) {
     var that = this;
     var url;
@@ -199,7 +199,7 @@ request({
   console.log('data', data); // Print the response status code if a response was received
   console.log('response:', response); // Print the HTML for the Google homepage.
     });
-  }*/
+  },
 /*    
 //    request( url, function(error, response, data) {
     request({
@@ -248,7 +248,7 @@ request({
   
   
   
-  getData: function (callback) {
+/*  getData: function (callback) {
     var that = this;
     var url;
 
@@ -389,7 +389,7 @@ request({
       callback(that.conditions);
     });
   },
-
+*/
 
   convertAirQuality: function (aqi) {
     var characteristic;
