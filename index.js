@@ -185,19 +185,18 @@ AirVisualAccessory.prototype = {
 //request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0', function(error, response, data) {
 request({
       url: 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0',
-    method: 'PUT',
-    preambleCRLF: true,
-    postambleCRLF: true,
+//    method: 'PUT',
+//    preambleCRLF: true,
+//    postambleCRLF: true,
 
     // alternatively pass an object containing additional options
-    multipart: {
-      chunked: false,
-      data: [
-        {
-          'content-type': 'application/json'
-        }
-      ]
+    multipart: [
+      {
+        'content-type': 'application/json',
+        data: JSON.stringify({foo: 'bar', _attachments: {'message.txt': {follows: true, length: 18, 'content_type': 'text/plain' }}})
+      }
     }
+    ]
   },
      function (error, response, data) {
   console.log('error:', error); // Print the error if one occurred
