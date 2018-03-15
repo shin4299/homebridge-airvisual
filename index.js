@@ -185,7 +185,6 @@ AirVisualAccessory.prototype = {
 //request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0', function(error, response, data) {
 request({
       url: 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0',
-      json: true
     method: 'PUT',
     preambleCRLF: true,
     postambleCRLF: true,
