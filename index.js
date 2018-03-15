@@ -165,7 +165,7 @@ AirVisualAccessory.prototype = {
   },
 
   
-  getData: function (callback) {
+/*  getData: function (callback) {
     var that = this;
     var url;
 
@@ -245,7 +245,7 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
   
   
   
-/*  getData: function (callback) {
+  getData: function (callback) {
     var that = this;
     var url;
 
@@ -266,6 +266,9 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
       url: url,
       json: true
     }, function (error, response, data) {
+  console.log('data', data); // Print the response status code if a response was received
+  console.log('response:', response); // Print the HTML for the Google homepage.
+
       if (!error) {
         switch (response.statusCode) {
           case 200:
