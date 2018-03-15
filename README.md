@@ -2,7 +2,7 @@
 
 [![NPM Version](https://img.shields.io/npm/v/homebridge-airvisual.svg)](https://www.npmjs.com/package/homebridge-airvisual)
 
-Homebridge plugin for the AirVisual API
+Homebridge plugin for the AirVisual API which allows access to outdoor air quality, humidity, and temperature.
 
 ## Installation
 
@@ -23,8 +23,8 @@ Example config.json:
     "api_key": "",
     "sensor": "air_quality",
     "aqi_standard": "us",
-    "latitude": "",
-    "longitude": "",
+    "latitude": ,
+    "longitude": ,
     "city": "",
     "state": "",
     "country": "",
@@ -56,6 +56,8 @@ By default, AirVisual will use IP geolocation to determine the nearest station t
 Alternatively, GPS coordinates (`latitude` and `longitude`) or a specific city (`city`, `state`, and `country`) can be used.
 
 * GPS coordinates can be found using https://www.latlong.net
+
+  * Coordinates must be entered as numbers, not strings
 
 * A specific city, state, and country can be found using https://www.airvisual.com/world
 

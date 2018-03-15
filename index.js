@@ -1,6 +1,7 @@
 'use strict';
 
 const firmware = require('./package.json').version;
+const fs = require('fs');
 const request = require('request');
 
 var Service;
@@ -18,6 +19,7 @@ function AirVisualAccessory(log, config) {
   this.state = config.state;
   this.country = config.country;
   this.polling = config.polling || false;
+  this.debug_mode = config.debug_mode || false;
 
   if (!this.key) {
     throw new Error('API key not specified');
@@ -147,12 +149,21 @@ AirVisualAccessory.prototype = {
     request({
       url: url,
       json: true
-    }, function (error, response, data) {
-      if (!error) {
+    }, function (requestError, response, data) {
+      if (!requestError) {
         switch (response.statusCode) {
           case 200:
             switch (data.status) {
               case 'success':
+                if (that.debug_mode) {
+                  fs.writeFile('./' + that.name + ' Response.json', JSON.stringify(data, null, 4), function (writeError) {
+                    if (writeError) {
+                      that.log.debug('Error while writing file: ' + writeError);
+                    } else {
+                      that.log.debug('File written successfully');
+                    }
+                  });
+                }
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
                 that.conditions.humidity = parseFloat(data.data.current.weather.hu);
                 that.conditions.temperature = parseFloat(data.data.current.weather.tp);
@@ -172,44 +183,44 @@ AirVisualAccessory.prototype = {
                   case 'air_quality':
                   default:
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
-                    if (data.data.current.pollution.co && data.data.units.co === 'ppm') {
+                    if (data.data.current.pollution.co) {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
-                      that.log.debug('Current carbon monoxide level is: %s%s', that.conditions.co, data.data.units.co);
+                      that.log.debug('Current carbon monoxide level is: %s', that.conditions.co);
                       that.sensorService
                         .getCharacteristic(Characteristic.CarbonMonoxideLevel)
                         .setValue(that.conditions.co);
                     }
-                    if (data.data.current.pollution.n2 && data.data.units.n2 === 'ugm3') {
+                    if (data.data.current.pollution.n2) {
                       that.conditions.n2 = parseFloat(data.data.current.pollution.n2.conc);
-                      that.log.debug('Current nitrogen dioxide density is: %s%s', that.conditions.n2, data.data.units.n2);
+                      that.log.debug('Current nitrogen dioxide density is: %s', that.conditions.n2);
                       that.sensorService
                         .getCharacteristic(Characteristic.NitrogenDioxideDensity)
                         .setValue(that.conditions.n2);
                     }
-                    if (data.data.current.pollution.o3 && data.data.units.o3 === 'ugm3') {
+                    if (data.data.current.pollution.o3) {
                       that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
-                      that.log.debug('Current ozone density is: %s%s', that.conditions.o3, data.data.units.o3);
+                      that.log.debug('Current ozone density is: %s', that.conditions.o3);
                       that.sensorService
                         .getCharacteristic(Characteristic.OzoneDensity)
                         .setValue(that.conditions.o3);
                     }
-                    if (data.data.current.pollution.p1 && data.data.units.p1 === 'ugm3') {
+                    if (data.data.current.pollution.p1) {
                       that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
-                      that.log.debug('Current PM10 density is: %s%s', that.conditions.pm10, data.data.units.p1);
+                      that.log.debug('Current PM10 density is: %s', that.conditions.pm10);
                       that.sensorService
                         .getCharacteristic(Characteristic.PM10Density)
                         .setValue(that.conditions.pm10);
                     }
-                    if (data.data.current.pollution.p2 && data.data.units.p2 === 'ugm3') {
+                    if (data.data.current.pollution.p2) {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
-                      that.log.debug('Current PM2.5 density is: %s%s', that.conditions.pm2_5, data.data.units.p2);
+                      that.log.debug('Current PM2.5 density is: %s', that.conditions.pm2_5);
                       that.sensorService
                         .getCharacteristic(Characteristic.PM2_5Density)
                         .setValue(that.conditions.pm2_5);
                     }
-                    if (data.data.current.pollution.s2 && data.data.units.s2 === 'ugm3') {
+                    if (data.data.current.pollution.s2) {
                       that.conditions.s2 = parseFloat(data.data.current.pollution.s2.conc);
-                      that.log.debug('Current sulphur dioxide density is: %s%s', that.conditions.s2, data.data.units.s2);
+                      that.log.debug('Current sulphur dioxide density is: %s', that.conditions.s2);
                       that.sensorService
                         .getCharacteristic(Characteristic.SulphurDioxideDensity)
                         .setValue(that.conditions.s2);
@@ -254,7 +265,7 @@ AirVisualAccessory.prototype = {
             break;
         }
       } else {
-        that.log.error('Unknown error: %s', error);
+        that.log.error('Unknown error: %s', requestError);
         that.sensorService
           .getCharacteristic(Characteristic.StatusActive)
           .setValue(false);
