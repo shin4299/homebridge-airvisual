@@ -192,7 +192,7 @@ request({
                 that.conditions.pm10 = parseFloat(data.pm10Value);
                 that.conditions.s2 = parseFloat(data.so2Value);
                 that.conditions.co = parseFloat(data.coValue);
-                that.conditions.pm2_5 = string(data.pm25Value);
+                that.conditions.pm2_5 = parseFloat(data.pm25Value);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
   console.log('error:', error); // Print the error if one occurred
