@@ -182,10 +182,7 @@ AirVisualAccessory.prototype = {
         url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
         break;
     }
-request({
-      url: url,
-      json: true
-    }, function (error, data, response) {
+request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, data, response) {
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
                 that.conditions.n2 = parseFloat(data.no2Value);
                 that.conditions.o3 = parseFloat(data.o3Value);
