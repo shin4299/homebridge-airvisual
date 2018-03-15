@@ -195,7 +195,6 @@ request({
         'content-type': 'application/json',
         data: JSON.stringify({foo: 'bar', _attachments: {'message.txt': {follows: true, length: 18, 'content_type': 'text/plain' }}})
       }
-    }
     ]
   },
      function (error, response, data) {
