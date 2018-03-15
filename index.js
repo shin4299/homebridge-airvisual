@@ -182,8 +182,25 @@ AirVisualAccessory.prototype = {
         url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
         break;
     }
-request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0', function(error, response, data) {
+//request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0', function(error, response, data) {
+request({
+      url: 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&ver=1.0',
+      json: true
+    method: 'PUT',
+    preambleCRLF: true,
+    postambleCRLF: true,
 
+    // alternatively pass an object containing additional options
+    multipart: {
+      chunked: false,
+      data: [
+        {
+          'content-type': 'application/json'
+        }
+      ]
+    }
+  },
+     function (error, response, data) {
   console.log('error:', error); // Print the error if one occurred
   console.log('data', data); // Print the response status code if a response was received
 //  console.log('response:', response); // Print the HTML for the Google homepage.
