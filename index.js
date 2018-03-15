@@ -165,7 +165,7 @@ AirVisualAccessory.prototype = {
   },
 
   
-/*  getData: function (callback) {
+  getData: function (callback) {
     var that = this;
     var url;
 
@@ -182,7 +182,12 @@ AirVisualAccessory.prototype = {
         url = 'http://weekendproject.net:8081/api/dust/무전동' //+ that.city;
         break;
     }
-request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, data, response) {
+request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty?ServiceKey=lQHPIVXwZJxZDzY7LxQNl3XJb2tf2puQ/OXub4W9POwv5o7Fr4FhUVTAtZDHgoGF4EzuPeCm5VU1Zw277RfEFw==&stationName=중구&dataTerm=DAILY&pageNo=1&numOfRows=1&ver=1.3&_returnType=json', function(error, response, data) {
+
+  console.log('error:', error); // Print the error if one occurred
+  console.log('data', data); // Print the response status code if a response was received
+  console.log('response:', response); // Print the HTML for the Google homepage.
+
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.khaiValue : data.khaiValue);
                 that.conditions.n2 = parseFloat(data.no2Value);
                 that.conditions.o3 = parseFloat(data.o3Value);
@@ -192,9 +197,6 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
                 that.conditions.pm2_5 = parseFloat(data.pm25Value);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
 
-//  console.log('error:', error); // Print the error if one occurred
-//  console.log('data', data); // Print the response status code if a response was received
-  console.log('response:', response); // Print the HTML for the Google homepage.
     });
   },
 /*    
@@ -245,7 +247,7 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
   
   
   
-  getData: function (callback) {
+/*  getData: function (callback) {
     var that = this;
     var url;
 
@@ -389,7 +391,7 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
       callback(that.conditions);
     });
   },
-
+*/
 
   convertAirQuality: function (aqi) {
     var characteristic;
