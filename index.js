@@ -389,7 +389,7 @@ request( 'http://weekendproject.net:8081/api/dust/무전동', function(error, da
       callback(that.conditions);
     });
   },
-*/
+
 
   convertAirQuality: function (aqi) {
     var characteristic;
