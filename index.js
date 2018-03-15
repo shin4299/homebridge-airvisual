@@ -186,7 +186,7 @@ request( 'http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireS
 
   console.log('error:', error); // Print the error if one occurred
   console.log('data', data); // Print the response status code if a response was received
-  console.log('response:', response); // Print the HTML for the Google homepage.
+//  console.log('response:', response); // Print the HTML for the Google homepage.
 
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.list[0].khaiValue : data.list[0].khaiValue);
                 that.conditions.n2 = parseFloat(data.list[0].no2Value);
