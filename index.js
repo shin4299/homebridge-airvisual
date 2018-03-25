@@ -19,7 +19,8 @@ function AirVisualAccessory(log, config) {
   this.state = config.state;
   this.country = config.country;
   this.polling = config.polling || false;
-  this.debug_mode = config.debug_mode || false;
+  this.units = config.ppb_units;
+  this.debug = config.debug_mode || false;
 
   if (!this.key) {
     throw new Error('API key not specified');
@@ -50,6 +51,17 @@ function AirVisualAccessory(log, config) {
   if (!([true, false].indexOf(this.polling) > -1)) {
     this.log.error('Unsupported option specified for polling, defaulting to false');
     this.polling = false;
+  }
+  if (this.units) {
+    for (var index = 0; index < this.units.length - 1; index += 1) {
+      if (!(['no2', 'o3', 'so2'].indexOf(this.units[index]) > -1)) {
+        this.log.error('Unsupported option specified for PPB units: %s, units will not be converted', this.units[index]);
+      }
+    }
+  }
+  if (!([true, false].indexOf(this.debug) > -1)) {
+    this.log.error('Unsupported option specified for debug, defaulting to false');
+    this.debug = false;
   }
 
   if (this.latitude && this.longitude) {
@@ -155,7 +167,7 @@ AirVisualAccessory.prototype = {
           case 200:
             switch (data.status) {
               case 'success':
-                if (that.debug_mode) {
+                if (that.debug) {
                   fs.writeFile('./' + that.name + ' Response.json', JSON.stringify(data, null, 4), function (writeError) {
                     if (writeError) {
                       that.log.debug('Error while writing file: ' + writeError);
@@ -166,6 +178,7 @@ AirVisualAccessory.prototype = {
                 }
                 that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
                 that.conditions.humidity = parseFloat(data.data.current.weather.hu);
+                that.conditions.pressure = parseFloat(data.data.current.weather.pr);
                 that.conditions.temperature = parseFloat(data.data.current.weather.tp);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
                 that.log.debug('City is: %s', data.data.city);
@@ -185,45 +198,79 @@ AirVisualAccessory.prototype = {
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
                     if (data.data.current.pollution.co) {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
-                      that.log.debug('Current carbon monoxide level is: %s', that.conditions.co);
+                      that.log.debug('Current carbon monoxide level is: %sµg/m3', that.conditions.co);
+                      that.conditions.co = that.convertUGM3toPPM(
+                        'co',
+                        parseFloat(data.data.current.pollution.co.conc),
+                        that.conditions.temperature,
+                        that.conditions.pressure
+                      );
+                      that.log.debug('Current carbon monoxide level is: %sppm', that.conditions.co);
                       that.sensorService
                         .getCharacteristic(Characteristic.CarbonMonoxideLevel)
                         .setValue(that.conditions.co);
                     }
                     if (data.data.current.pollution.n2) {
-                      that.conditions.n2 = parseFloat(data.data.current.pollution.n2.conc);
-                      that.log.debug('Current nitrogen dioxide density is: %s', that.conditions.n2);
+                      that.conditions.no2 = parseFloat(data.data.current.pollution.n2.conc);
+                      if ([that.units].indexOf('no2') > -1) {
+                        that.log.debug('Current nitrogen dioxide density is: %sppb', that.conditions.no2);
+                        that.conditions.no2 = that.convertPPBtoUGM3(
+                          'no2',
+                          parseFloat(data.data.current.pollution.n2.conc),
+                          that.conditions.temperature,
+                          that.conditions.pressure
+                        );
+                      }
+                      that.log.debug('Current nitrogen dioxide density is: %sµg/m3', that.conditions.no2);
                       that.sensorService
                         .getCharacteristic(Characteristic.NitrogenDioxideDensity)
-                        .setValue(that.conditions.n2);
+                        .setValue(that.conditions.no2);
                     }
                     if (data.data.current.pollution.o3) {
                       that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
-                      that.log.debug('Current ozone density is: %s', that.conditions.o3);
+                      if ([that.units].indexOf('o3') > -1) {
+                        that.log.debug('Current ozone density is: %sppb', that.conditions.o3);
+                        that.conditions.o3 = that.convertPPBtoUGM3(
+                          'o3',
+                          parseFloat(data.data.current.pollution.o3.conc),
+                          that.conditions.temperature,
+                          that.conditions.pressure
+                        );
+                      }
+                      that.log.debug('Current ozone density is: %sµg/m3', that.conditions.o3);
                       that.sensorService
                         .getCharacteristic(Characteristic.OzoneDensity)
                         .setValue(that.conditions.o3);
                     }
                     if (data.data.current.pollution.p1) {
                       that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
-                      that.log.debug('Current PM10 density is: %s', that.conditions.pm10);
+                      that.log.debug('Current PM10 density is: %sµg/m3', that.conditions.pm10);
                       that.sensorService
                         .getCharacteristic(Characteristic.PM10Density)
                         .setValue(that.conditions.pm10);
                     }
                     if (data.data.current.pollution.p2) {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
-                      that.log.debug('Current PM2.5 density is: %s', that.conditions.pm2_5);
+                      that.log.debug('Current PM2.5 density is: %sµg/m3', that.conditions.pm2_5);
                       that.sensorService
                         .getCharacteristic(Characteristic.PM2_5Density)
                         .setValue(that.conditions.pm2_5);
                     }
                     if (data.data.current.pollution.s2) {
-                      that.conditions.s2 = parseFloat(data.data.current.pollution.s2.conc);
-                      that.log.debug('Current sulphur dioxide density is: %s', that.conditions.s2);
+                      that.conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
+                      if ([that.units].indexOf('so2') > -1) {
+                        that.log.debug('Current sulphur dioxide density is: %sppb', that.conditions.so2);
+                        that.conditions.so2 = that.convertPPBtoUGM3(
+                          'so2',
+                          parseFloat(data.data.current.pollution.s2.conc),
+                          that.conditions.temperature,
+                          that.conditions.pressure
+                        );
+                      }
+                      that.log.debug('Current sulphur dioxide density is: %sµg/m3', that.conditions.so2);
                       that.sensorService
                         .getCharacteristic(Characteristic.SulphurDioxideDensity)
-                        .setValue(that.conditions.s2);
+                        .setValue(that.conditions.so2);
                     }
                     break;
                 }
@@ -294,8 +341,40 @@ AirVisualAccessory.prototype = {
     return characteristic;
   },
 
+  convertPPBtoUGM3: function (pollutant, ppb, temperature, pressure) {
+    var weight;
+    switch (pollutant) {
+      case 'no2':
+        weight = 46.01;
+        break;
+      case 'o3':
+        weight = 48;
+        break;
+      case 'so2':
+        weight = 64.07;
+        break;
+      default:
+        weight = 0;
+        break;
+    }
+    return ppb * (weight / (22.41 * ((temperature + 273) / 273) * (1013 / pressure)));
+  },
+
   convertTemperature: function (temperature) {
     return (temperature * 1.8) + 32;
+  },
+
+  convertUGM3toPPM: function (pollutant, ugm3, temperature, pressure) {
+    var weight;
+    switch (pollutant) {
+      case 'co':
+        weight = 28.01;
+        break;
+      default:
+        weight = 0;
+        break;
+    }
+    return ((ugm3 * 22.41 * ((temperature + 273) / 273) * (1013 / pressure)) / weight) / 1000;
   },
 
   identify: function (callback) {

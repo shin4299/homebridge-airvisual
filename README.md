@@ -28,7 +28,8 @@ Example config.json:
     "city": "",
     "state": "",
     "country": "",
-    "polling": false
+    "polling": false,
+    "ppb_units": ["no2", "o3", "so2"]
   }
 ],
 ```
@@ -48,6 +49,8 @@ Field | Required | Default | Description
 `state` | no | | See [**Location**](#location) notes below
 `country` | no | | See [**Location**](#location) notes below
 `polling` | no | `false` | Must be `true` or `false` (must be a boolean, not a string)
+`ppb_units` | no | | See [**Units**](#units) notes below
+
 
 ## Location
 
@@ -67,8 +70,21 @@ Alternatively, GPS coordinates (`latitude` and `longitude`) or a specific city (
 
 * If both `latitude`, `longitude` and `city`, `state`, `country` are specified; the GPS coordinates will be used.
 
+## Units
+
+If a "Startup" or "Enterprise" API key is used, then AirVisual should return concentration for individual pollutants in units of µg/m3. However, various locations appear to report some pollutants in units of ppb.
+
+These pollutants can be converted to µg/m3, which is required for HomeKit, with the following steps:
+
+1. Use the AirVisual app or website to see the reported units of each pollutant for the desired location.
+
+2. Then use the `ppb_units` configuration option to indicate which pollutants should be converted from ppb to µg/m3.
+
+Only `no2` (nitrogen dioxide), `o3` (ozone), and `so2` (sulphur dioxide) are supported.
+
+
 ## Miscellaneous
 
 * Homebridge supports multiple instances for accessories; the configuration entry can be duplicated for each location and/or sensor type desired.
 
-* This plugin supports additional characteristics for air quality sensors if a "Startup" or "Enterprise" API key from AirVisual is used. However, that support is untested due to the prohibitive cost of the paid keys. If anyone has a paid API key and is willing to test, it would be much appreciated!
+* This plugin supports additional characteristics for air quality sensors if a "Startup" or "Enterprise" API key from AirVisual is used.
