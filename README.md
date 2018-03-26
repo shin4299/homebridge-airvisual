@@ -81,7 +81,7 @@ These pollutants can be converted to µg/m3, which is required for HomeKit, with
 
 2. Then use the `ppb_units` configuration option to indicate which pollutants should be converted from ppb to µg/m3.
 
-Only `no2` (nitrogen dioxide), `o3` (ozone), and `so2` (sulphur dioxide) are supported.
+Only `no2`, `o3`, and `so2` are supported for conversion.
 
 ## Miscellaneous
 

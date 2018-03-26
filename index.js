@@ -13,10 +13,8 @@ function AirVisualAccessory(log, config) {
   this.key = config.api_key;
   this.sensor = config.sensor || 'air_quality';
   this.standard = config.aqi_standard || 'us';
-  this.search = config.search_method || 'city';
   this.latitude = config.latitude;
   this.longitude = config.longitude;
-  this.station = config.station;
   this.city = config.city;
   this.state = config.state;
   this.country = config.country;
@@ -29,69 +27,61 @@ function AirVisualAccessory(log, config) {
     throw new Error('API key not specified');
   }
   if (!(['air_quality', 'humidity', 'temperature'].indexOf(this.sensor) > -1)) {
-    this.log.error('Unsupported sensor specified, defaulting to air quality');
+    this.log.warn('Unsupported sensor specified, defaulting to air quality');
     this.sensor = 'air_quality';
   }
   if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
-    this.log.error('Unsupported air quality standard specified, defaulting to US');
+    this.log.warn('Unsupported air quality standard specified, defaulting to US');
     this.standard = 'us';
-  }
-  if (!(['city', 'station'].indexOf(this.search) > -1)) {
-    this.log.error('Unsupported search method specified, defaulting to nearest city');
-    this.search = 'city';
   }
   if ([this.latitude, this.longitude].indexOf(undefined) > -1) {
     if (this.latitude || this.longitude) {
-      this.log.error('Incomplete GPS coordinates specified, defaulting to IP geolocation');
+      this.log.warn('Incomplete GPS coordinates specified, defaulting to IP geolocation');
       this.latitude = undefined;
       this.longitude = undefined;
     }
   }
   if ([this.city, this.state, this.country].indexOf(undefined) > -1) {
     if (this.city || this.state || this.country) {
-      this.log.error('Incomplete city specified, defaulting to IP geolocation');
+      this.log.warn('Incomplete city specified, defaulting to IP geolocation');
       this.city = undefined;
       this.state = undefined;
       this.country = undefined;
     }
   }
   if (this.ppb) {
-    for (var index = 0; index <= this.units.length - 1; index += 1) {
+    for (var index = 0; index < this.ppb.length; index += 1) {
       if (!(['no2', 'o3', 'so2'].indexOf(this.ppb[index]) > -1)) {
-        this.log.error('Unsupported option specified for PPB units: %s, units will not be converted', this.ppb[index]);
+        this.log.warn('Unsupported option specified for PPB units, units will not be converted: %s', this.ppb[index]);
+      } else {
+        this.log.debug('The following pollutant will be converted from ppb to µg/m3: %s', this.ppb[index]);
       }
     }
   }
   if (!([true, false].indexOf(this.polling) > -1)) {
-    this.log.error('Unsupported option specified for polling, defaulting to false');
+    this.log.warn('Unsupported option specified for polling, defaulting to false');
     this.polling = false;
   }
   if (!([true, false].indexOf(this.https) > -1)) {
-    this.log.error('Unsupported option specified for HTTPS, defaulting to true');
+    this.log.warn('Unsupported option specified for HTTPS, defaulting to true');
     this.polling = true;
   }
   if (!([true, false].indexOf(this.debug) > -1)) {
-    this.log.error('Unsupported option specified for debug, defaulting to false');
+    this.log.warn('Unsupported option specified for debug, defaulting to false');
     this.debug = false;
   }
 
   if (this.latitude && this.longitude) {
-    this.log.debug('Using GPS coordinates to get nearest %s data', this.search);
+    this.log.debug('Using specified GPS coordinates: %s°, %s°', this.latitude, this.longitude);
     this.mode = 'gps';
-    this.serial = String(this.latitude.toFixed(3) + ', ' + this.longitude.toFixed(3));
+    this.serial = String(this.latitude.toFixed(3) + '°, ' + this.longitude.toFixed(3) + '°');
   } else if (this.city && this.state && this.country) {
-    if (this.station) {
-      this.log.debug('Using specified station: %s, %s, %s, %s', this.station, this.city, this.state, this.country);
-      this.mode = 'station';
-      this.serial = String(this.station + ', ' + this.city + ', ' + this.state + ', ' + this.country);
-    } else {
-      this.log.debug('Using specified city: %s, %s, %s', this.city, this.state, this.country);
-      this.mode = 'city';
-      this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
-    }
+    this.log.debug('Using specified city: %s, %s, %s', this.city, this.state, this.country);
+    this.mode = 'city';
+    this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
   } else {
-    this.log.debug('Using IP geolocation to get nearest %s data', this.search);
-    this.mode = 'ip_city';
+    this.log.debug('Using IP geolocation');
+    this.mode = 'ip';
     this.serial = 'IP Geolocation';
   }
 
@@ -164,7 +154,6 @@ AirVisualAccessory.prototype = {
   getData: function (callback) {
     var that = this;
 
-    var path = that.search === 'city' ? 'nearest_city' : 'nearest_station';
     var prefix = that.https === true ? 'https' : 'http';
     var url;
     switch (that.mode) {
@@ -172,14 +161,11 @@ AirVisualAccessory.prototype = {
         url = prefix + '://api.airvisual.com/v2/city?city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
         break;
       case 'gps':
-        url = prefix + '://api.airvisual.com/v2/' + path + '?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
-        break;
-      case 'station':
-        url = prefix + '://api.airvisual.com/v2/station?station=' + that.station + '&city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
+        url = prefix + '://api.airvisual.com/v2/nearest_city?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
         break;
       case 'ip':
       default:
-        url = prefix + '://api.airvisual.com/v2/' + path + '?key=' + that.key;
+        url = prefix + '://api.airvisual.com/v2/nearest_city?key=' + that.key;
         break;
     }
     url = url.replace(/ /g, '%20');
@@ -216,8 +202,8 @@ AirVisualAccessory.prototype = {
                 that.log.debug('City is: %s', data.data.city);
                 that.log.debug('State is: %s', data.data.state);
                 that.log.debug('Country is: %s', data.data.country);
-                that.log.debug('Latitude is: %s', data.data.location.coordinates[0]);
-                that.log.debug('Longitude is: %s', data.data.location.coordinates[1]);
+                that.log.debug('Latitude is: %s°', data.data.location.coordinates[1]);
+                that.log.debug('Longitude is: %s°', data.data.location.coordinates[0]);
                 switch (that.sensor) {
                   case 'humidity':
                     that.log.debug('Current humidity is: %s%', that.conditions.humidity);
