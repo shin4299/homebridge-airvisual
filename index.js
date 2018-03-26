@@ -13,13 +13,16 @@ function AirVisualAccessory(log, config) {
   this.key = config.api_key;
   this.sensor = config.sensor || 'air_quality';
   this.standard = config.aqi_standard || 'us';
+  this.search = config.search_method || 'city';
   this.latitude = config.latitude;
   this.longitude = config.longitude;
+  this.station = config.station;
   this.city = config.city;
   this.state = config.state;
   this.country = config.country;
+  this.ppb = config.ppb_units;
   this.polling = config.polling || false;
-  this.units = config.ppb_units;
+  this.https = config.https || true;
   this.debug = config.debug_mode || false;
 
   if (!this.key) {
@@ -32,6 +35,10 @@ function AirVisualAccessory(log, config) {
   if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
     this.log.error('Unsupported air quality standard specified, defaulting to US');
     this.standard = 'us';
+  }
+  if (!(['city', 'station'].indexOf(this.search) > -1)) {
+    this.log.error('Unsupported search method specified, defaulting to nearest city');
+    this.search = 'city';
   }
   if ([this.latitude, this.longitude].indexOf(undefined) > -1) {
     if (this.latitude || this.longitude) {
@@ -48,16 +55,20 @@ function AirVisualAccessory(log, config) {
       this.country = undefined;
     }
   }
+  if (this.ppb) {
+    for (var index = 0; index <= this.units.length - 1; index += 1) {
+      if (!(['no2', 'o3', 'so2'].indexOf(this.ppb[index]) > -1)) {
+        this.log.error('Unsupported option specified for PPB units: %s, units will not be converted', this.ppb[index]);
+      }
+    }
+  }
   if (!([true, false].indexOf(this.polling) > -1)) {
     this.log.error('Unsupported option specified for polling, defaulting to false');
     this.polling = false;
   }
-  if (this.units) {
-    for (var index = 0; index < this.units.length - 1; index += 1) {
-      if (!(['no2', 'o3', 'so2'].indexOf(this.units[index]) > -1)) {
-        this.log.error('Unsupported option specified for PPB units: %s, units will not be converted', this.units[index]);
-      }
-    }
+  if (!([true, false].indexOf(this.https) > -1)) {
+    this.log.error('Unsupported option specified for HTTPS, defaulting to true');
+    this.polling = true;
   }
   if (!([true, false].indexOf(this.debug) > -1)) {
     this.log.error('Unsupported option specified for debug, defaulting to false');
@@ -65,16 +76,22 @@ function AirVisualAccessory(log, config) {
   }
 
   if (this.latitude && this.longitude) {
-    this.log.debug('Using GPS coordinates');
+    this.log.debug('Using GPS coordinates to get nearest %s data', this.search);
     this.mode = 'gps';
     this.serial = String(this.latitude.toFixed(3) + ', ' + this.longitude.toFixed(3));
   } else if (this.city && this.state && this.country) {
-    this.log.debug('Using specified city');
-    this.mode = 'city';
-    this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
+    if (this.station) {
+      this.log.debug('Using specified station: %s, %s, %s, %s', this.station, this.city, this.state, this.country);
+      this.mode = 'station';
+      this.serial = String(this.station + ', ' + this.city + ', ' + this.state + ', ' + this.country);
+    } else {
+      this.log.debug('Using specified city: %s, %s, %s', this.city, this.state, this.country);
+      this.mode = 'city';
+      this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
+    }
   } else {
-    this.log.debug('Using IP geolocation');
-    this.mode = 'ip';
+    this.log.debug('Using IP geolocation to get nearest %s data', this.search);
+    this.mode = 'ip_city';
     this.serial = 'IP Geolocation';
   }
 
@@ -87,6 +104,8 @@ function AirVisualAccessory(log, config) {
   }
 
   this.log.debug('Polling is %s', (this.polling) ? 'enabled' : 'disabled');
+  this.log.debug('HTTPS is %s', (this.https) ? 'enabled' : 'disabled');
+  this.log.debug('Debug mode is %s', (this.debug) ? 'enabled' : 'disabled');
 
   this.conditions = {};
 }
@@ -144,20 +163,27 @@ AirVisualAccessory.prototype = {
 
   getData: function (callback) {
     var that = this;
-    var url;
 
+    var path = that.search === 'city' ? 'nearest_city' : 'nearest_station';
+    var prefix = that.https === true ? 'https' : 'http';
+    var url;
     switch (that.mode) {
-      case 'gps':
-        url = 'https://api.airvisual.com/v2/nearest_city?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
-        break;
       case 'city':
-        url = 'https://api.airvisual.com/v2/city?city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
+        url = prefix + '://api.airvisual.com/v2/city?city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
+        break;
+      case 'gps':
+        url = prefix + '://api.airvisual.com/v2/' + path + '?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
+        break;
+      case 'station':
+        url = prefix + '://api.airvisual.com/v2/station?station=' + that.station + '&city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
         break;
       case 'ip':
       default:
-        url = 'https://api.airvisual.com/v2/nearest_city?key=' + that.key;
+        url = prefix + '://api.airvisual.com/v2/' + path + '?key=' + that.key;
         break;
     }
+    url = url.replace(/ /g, '%20');
+    that.log.debug('URL is: %s', url);
     request({
       url: url,
       json: true
@@ -181,6 +207,12 @@ AirVisualAccessory.prototype = {
                 that.conditions.pressure = parseFloat(data.data.current.weather.pr);
                 that.conditions.temperature = parseFloat(data.data.current.weather.tp);
                 that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
+                if (data.data.name) {
+                  that.log.debug('Station name is: %s', data.data.name);
+                }
+                if (data.data.local_name) {
+                  that.log.debug('Local name is: %s', data.data.local_name);
+                }
                 that.log.debug('City is: %s', data.data.city);
                 that.log.debug('State is: %s', data.data.state);
                 that.log.debug('Country is: %s', data.data.country);
@@ -198,8 +230,8 @@ AirVisualAccessory.prototype = {
                     that.log.debug('Current air quality index is: %s', that.conditions.aqi);
                     if (data.data.current.pollution.co) {
                       that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
-                      that.log.debug('Current carbon monoxide level is: %sµg/m3', that.conditions.co);
-                      that.conditions.co = that.convertUGM3toPPM(
+                      that.log.debug('Current carbon monoxide level is: %smg/m3 (%sµg/m3)', that.conditions.co, that.conditions.co * 1000);
+                      that.conditions.co = that.convertMilligramToPPM(
                         'co',
                         parseFloat(data.data.current.pollution.co.conc),
                         that.conditions.temperature,
@@ -212,9 +244,9 @@ AirVisualAccessory.prototype = {
                     }
                     if (data.data.current.pollution.n2) {
                       that.conditions.no2 = parseFloat(data.data.current.pollution.n2.conc);
-                      if ([that.units].indexOf('no2') > -1) {
+                      if (that.ppb && (that.ppb.indexOf('no2') > -1)) {
                         that.log.debug('Current nitrogen dioxide density is: %sppb', that.conditions.no2);
-                        that.conditions.no2 = that.convertPPBtoUGM3(
+                        that.conditions.no2 = that.convertPPBtoMicrogram(
                           'no2',
                           parseFloat(data.data.current.pollution.n2.conc),
                           that.conditions.temperature,
@@ -228,9 +260,9 @@ AirVisualAccessory.prototype = {
                     }
                     if (data.data.current.pollution.o3) {
                       that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
-                      if ([that.units].indexOf('o3') > -1) {
+                      if (that.ppb && (that.ppb.indexOf('o3') > -1)) {
                         that.log.debug('Current ozone density is: %sppb', that.conditions.o3);
-                        that.conditions.o3 = that.convertPPBtoUGM3(
+                        that.conditions.o3 = that.convertPPBtoMicrogram(
                           'o3',
                           parseFloat(data.data.current.pollution.o3.conc),
                           that.conditions.temperature,
@@ -258,9 +290,9 @@ AirVisualAccessory.prototype = {
                     }
                     if (data.data.current.pollution.s2) {
                       that.conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
-                      if ([that.units].indexOf('so2') > -1) {
+                      if (that.ppb && (that.ppb.indexOf('so2') > -1)) {
                         that.log.debug('Current sulphur dioxide density is: %sppb', that.conditions.so2);
-                        that.conditions.so2 = that.convertPPBtoUGM3(
+                        that.conditions.so2 = that.convertPPBtoMicrogram(
                           'so2',
                           parseFloat(data.data.current.pollution.s2.conc),
                           that.conditions.temperature,
@@ -341,7 +373,20 @@ AirVisualAccessory.prototype = {
     return characteristic;
   },
 
-  convertPPBtoUGM3: function (pollutant, ppb, temperature, pressure) {
+  convertMilligramToPPM: function (pollutant, milligram, temperature, pressure) {
+    var weight;
+    switch (pollutant) {
+      case 'co':
+        weight = 28.01;
+        break;
+      default:
+        weight = 0;
+        break;
+    }
+    return ((milligram * 22.41 * ((temperature + 273) / 273) * (1013 / pressure)) / weight);
+  },
+
+  convertPPBtoMicrogram: function (pollutant, ppb, temperature, pressure) {
     var weight;
     switch (pollutant) {
       case 'no2':
@@ -357,24 +402,11 @@ AirVisualAccessory.prototype = {
         weight = 0;
         break;
     }
-    return ppb * (weight / (22.41 * ((temperature + 273) / 273) * (1013 / pressure)));
+    return Math.round(ppb * (weight / (22.41 * ((temperature + 273) / 273) * (1013 / pressure))));
   },
 
   convertTemperature: function (temperature) {
     return (temperature * 1.8) + 32;
-  },
-
-  convertUGM3toPPM: function (pollutant, ugm3, temperature, pressure) {
-    var weight;
-    switch (pollutant) {
-      case 'co':
-        weight = 28.01;
-        break;
-      default:
-        weight = 0;
-        break;
-    }
-    return ((ugm3 * 22.41 * ((temperature + 273) / 273) * (1013 / pressure)) / weight) / 1000;
   },
 
   identify: function (callback) {

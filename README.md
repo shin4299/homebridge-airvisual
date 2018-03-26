@@ -28,8 +28,9 @@ Example config.json:
     "city": "",
     "state": "",
     "country": "",
+    "ppb_units": ["no2", "o3", "so2"],
     "polling": false,
-    "ppb_units": ["no2", "o3", "so2"]
+    "https": true
   }
 ],
 ```
@@ -48,9 +49,9 @@ Field | Required | Default | Description
 `city` | no | | See [**Location**](#location) notes below
 `state` | no | | See [**Location**](#location) notes below
 `country` | no | | See [**Location**](#location) notes below
-`polling` | no | `false` | Must be `true` or `false` (must be a boolean, not a string)
 `ppb_units` | no | | See [**Units**](#units) notes below
-
+`polling` | no | `false` | Must be `true` or `false` (must be a boolean, not a string)
+`https` | no | `true` | Must be `true` or `false` (must be a boolean, not a string)
 
 ## Location
 
@@ -81,7 +82,6 @@ These pollutants can be converted to µg/m3, which is required for HomeKit, with
 2. Then use the `ppb_units` configuration option to indicate which pollutants should be converted from ppb to µg/m3.
 
 Only `no2` (nitrogen dioxide), `o3` (ozone), and `so2` (sulphur dioxide) are supported.
-
 
 ## Miscellaneous
 
