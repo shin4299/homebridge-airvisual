@@ -21,7 +21,7 @@ function AirVisualAccessory(log, config) {
   this.ppb = config.ppb_units;
   this.polling = config.polling || false;
   this.https = config.https || true;
-  this.debug = config.debug_mode || false;
+  this.save = config.save_response || false;
 
   if (!this.key) {
     throw new Error('API key not specified');
@@ -66,9 +66,9 @@ function AirVisualAccessory(log, config) {
     this.log.warn('Unsupported option specified for HTTPS, defaulting to true');
     this.polling = true;
   }
-  if (!([true, false].indexOf(this.debug) > -1)) {
-    this.log.warn('Unsupported option specified for debug, defaulting to false');
-    this.debug = false;
+  if (!([true, false].indexOf(this.save) > -1)) {
+    this.log.warn('Unsupported option specified for save response, defaulting to false');
+    this.save = false;
   }
 
   if (this.latitude && this.longitude) {
@@ -95,7 +95,7 @@ function AirVisualAccessory(log, config) {
 
   this.log.debug('Polling is %s', (this.polling) ? 'enabled' : 'disabled');
   this.log.debug('HTTPS is %s', (this.https) ? 'enabled' : 'disabled');
-  this.log.debug('Debug mode is %s', (this.debug) ? 'enabled' : 'disabled');
+  this.log.debug('Save response is %s', (this.save) ? 'enabled' : 'disabled');
 
   this.conditions = {};
 }
@@ -179,7 +179,7 @@ AirVisualAccessory.prototype = {
           case 200:
             switch (data.status) {
               case 'success':
-                if (that.debug) {
+                if (that.save) {
                   fs.writeFile('./' + that.name + ' Response.json', JSON.stringify(data, null, 4), function (writeError) {
                     if (writeError) {
                       that.log.debug('Error while writing file: ' + writeError);
@@ -219,7 +219,7 @@ AirVisualAccessory.prototype = {
                       that.log.debug('Current carbon monoxide level is: %smg/m3 (%sµg/m3)', that.conditions.co, that.conditions.co * 1000);
                       that.conditions.co = that.convertMilligramToPPM(
                         'co',
-                        parseFloat(data.data.current.pollution.co.conc),
+                        that.conditions.co,
                         that.conditions.temperature,
                         that.conditions.pressure
                       );
@@ -227,6 +227,9 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.CarbonMonoxideLevel)
                         .setValue(that.conditions.co);
+                    } else {
+                      that.sensorService
+                        .removeCharacteristic(Characteristic.CarbonMonoxideLevel);
                     }
                     if (data.data.current.pollution.n2) {
                       that.conditions.no2 = parseFloat(data.data.current.pollution.n2.conc);
@@ -234,7 +237,7 @@ AirVisualAccessory.prototype = {
                         that.log.debug('Current nitrogen dioxide density is: %sppb', that.conditions.no2);
                         that.conditions.no2 = that.convertPPBtoMicrogram(
                           'no2',
-                          parseFloat(data.data.current.pollution.n2.conc),
+                          that.conditions.no2,
                           that.conditions.temperature,
                           that.conditions.pressure
                         );
@@ -243,6 +246,9 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.NitrogenDioxideDensity)
                         .setValue(that.conditions.no2);
+                    } else {
+                      that.sensorService
+                        .removeCharacteristic(Characteristic.NitrogenDioxideDensity);
                     }
                     if (data.data.current.pollution.o3) {
                       that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
@@ -250,7 +256,7 @@ AirVisualAccessory.prototype = {
                         that.log.debug('Current ozone density is: %sppb', that.conditions.o3);
                         that.conditions.o3 = that.convertPPBtoMicrogram(
                           'o3',
-                          parseFloat(data.data.current.pollution.o3.conc),
+                          that.conditions.o3,
                           that.conditions.temperature,
                           that.conditions.pressure
                         );
@@ -259,6 +265,9 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.OzoneDensity)
                         .setValue(that.conditions.o3);
+                    } else {
+                      that.sensorService
+                        .removeCharacteristic(Characteristic.OzoneDensity);
                     }
                     if (data.data.current.pollution.p1) {
                       that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
@@ -266,6 +275,9 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.PM10Density)
                         .setValue(that.conditions.pm10);
+                    } else {
+                      that.sensorService
+                        .removeCharacteristic(Characteristic.PM10Density);
                     }
                     if (data.data.current.pollution.p2) {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
@@ -273,6 +285,9 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.PM2_5Density)
                         .setValue(that.conditions.pm2_5);
+                    } else {
+                      that.sensorService
+                        .removeCharacteristic(Characteristic.PM2_5Density);
                     }
                     if (data.data.current.pollution.s2) {
                       that.conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
@@ -280,7 +295,7 @@ AirVisualAccessory.prototype = {
                         that.log.debug('Current sulphur dioxide density is: %sppb', that.conditions.so2);
                         that.conditions.so2 = that.convertPPBtoMicrogram(
                           'so2',
-                          parseFloat(data.data.current.pollution.s2.conc),
+                          that.conditions.so2,
                           that.conditions.temperature,
                           that.conditions.pressure
                         );
@@ -289,6 +304,9 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .getCharacteristic(Characteristic.SulphurDioxideDensity)
                         .setValue(that.conditions.so2);
+                    } else {
+                      that.sensorService
+                        .removeCharacteristic(Characteristic.SulphurDioxideDensity);
                     }
                     break;
                 }
