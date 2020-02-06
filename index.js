@@ -23,6 +23,7 @@ function AirVisualAccessory(log, config) {
   this.country = config.country;
   this.ppb = config.ppb_units;
   this.polling = config.polling || false;
+  this.interval = (config.interval || 60) * 60 * 1000;
   this.https = config.https || true;
   this.save = config.save_response || false;
 
@@ -90,7 +91,6 @@ function AirVisualAccessory(log, config) {
 
   if (this.polling) {
     var that = this;
-    this.interval = 60 * 60000;
     setTimeout(function () {
       that.servicePolling();
     }, this.interval);
