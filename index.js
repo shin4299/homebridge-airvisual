@@ -1,3 +1,6 @@
+/* eslint-disable no-multi-spaces */
+/* eslint-disable array-bracket-spacing */
+
 'use strict';
 
 const firmware = require('./package.json').version;
@@ -276,8 +279,17 @@ AirVisualAccessory.prototype = {
                         .getCharacteristic(Characteristic.PM10Density)
                         .setValue(that.conditions.pm10);
                     } else {
-                      that.sensorService
-                        .removeCharacteristic(Characteristic.PM10Density);
+                      const pm10 = that.inferPM10(that.conditions.aqi);
+                      if (pm10) {
+                        that.conditions.pm10 = pm10;
+                        that.log('Inferred PM10 density is: %sµg/m3', that.conditions.pm10);
+                        that.sensorService
+                          .getCharacteristic(Characteristic.PM10Density)
+                          .setValue(that.conditions.pm10);
+                      } else {
+                        that.sensorService
+                          .removeCharacteristic(Characteristic.PM10Density);
+                      }
                     }
                     if (data.data.current.pollution.p2) {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
@@ -286,8 +298,17 @@ AirVisualAccessory.prototype = {
                         .getCharacteristic(Characteristic.PM2_5Density)
                         .setValue(that.conditions.pm2_5);
                     } else {
-                      that.sensorService
-                        .removeCharacteristic(Characteristic.PM2_5Density);
+                      const pm2_5 = that.inferPM2_5(that.conditions.aqi);
+                      if (pm2_5) {
+                        that.conditions.pm2_5 = pm2_5;
+                        that.log('Inferred PM2.5 density is: %sµg/m3', that.conditions.pm2_5);
+                        that.sensorService
+                          .getCharacteristic(Characteristic.PM2_5Density)
+                          .setValue(that.conditions.pm2_5);
+                      } else {
+                        that.sensorService
+                          .removeCharacteristic(Characteristic.PM2_5Density);
+                      }
                     }
                     if (data.data.current.pollution.s2) {
                       that.conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
@@ -375,6 +396,37 @@ AirVisualAccessory.prototype = {
       characteristic = Characteristic.AirQuality.UNKNOWN;
     }
     return characteristic;
+  },
+
+  // Source: https://en.wikipedia.org/wiki/Air_quality_index#Computing_the_AQI
+  inferPM2_5: function (aqi) { // μg/m3
+    if (!aqi) return null;
+    var table = [
+      [  0,  50,   0.0,  12.0],
+      [ 50, 100,  12.0,  35.5],
+      [100, 150,  35.5,  55.5],
+      [150, 200,  55.5, 150.5],
+      [200, 300, 150.5, 250.5],
+      [300, 400, 250.5, 350.5],
+      [400, 500, 350.5, 500.5],
+    ];
+    var [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
+    return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
+  },
+
+  inferPM10: function (aqi) { // μg/m3
+    if (!aqi) return null;
+    var table = [
+      [  0,  50,   0,  55],
+      [ 50, 100,  55, 155],
+      [100, 150, 155, 255],
+      [150, 200, 255, 355],
+      [200, 300, 355, 425],
+      [300, 400, 425, 505],
+      [400, 500, 505, 605],
+    ];
+    var [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
+    return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
   },
 
   convertMilligramToPPM: function (pollutant, milligram, temperature, pressure) {
