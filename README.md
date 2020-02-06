@@ -1,4 +1,4 @@
-# homebridge-airvisual
+# homebridge-airvisual-2
 
 Homebridge plugin for the AirVisual API which allows access to outdoor air quality, humidity, and temperature.
 
