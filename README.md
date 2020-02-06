@@ -5,7 +5,7 @@ Homebridge plugin for the AirVisual API which allows access to outdoor air quali
 ## Installation
 
 1. Install homebridge using the instructions at https://github.com/nfarina/homebridge#installation
-2. Install this plugin using: `npm install -g homebridge-airvisual`
+2. Install this plugin using: `npm install -g homebridge-airvisual-2`
 3. Register for an account and get an API key at https://www.airvisual.com/api
 4. Update the Homebridge configuration file
 
@@ -89,7 +89,7 @@ Only `no2`, `o3`, and `so2` are supported for conversion.
 
 * By default the API is queried once per hour. A 10 minute interval would result in ~5000 requests per month, while the free tier includes 10.000 requests per month.
 
-* AQI categories are mapped to HomeKit categories as follows. Note that HomeKit will visually highlight the sensor for categories Inferior and Poor.
+* AQI categories are mapped to HomeKit categories as follows. Note that HomeKit will show visual cues on the dashboard for categories "Inferior" and "Poor".
 
   AQI     | AQI Category                   | HomeKit
   --------|--------------------------------|-----------
