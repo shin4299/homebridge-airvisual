@@ -234,6 +234,7 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .removeCharacteristic(Characteristic.CarbonMonoxideLevel);
                     }
+
                     if (data.data.current.pollution.n2) {
                       that.conditions.no2 = parseFloat(data.data.current.pollution.n2.conc);
                       if (that.ppb && (that.ppb.indexOf('no2') > -1)) {
@@ -253,6 +254,7 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .removeCharacteristic(Characteristic.NitrogenDioxideDensity);
                     }
+
                     if (data.data.current.pollution.o3) {
                       that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
                       if (that.ppb && (that.ppb.indexOf('o3') > -1)) {
@@ -272,6 +274,7 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .removeCharacteristic(Characteristic.OzoneDensity);
                     }
+
                     if (data.data.current.pollution.p1) {
                       that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
                       that.log.debug('Current PM10 density is: %sµg/m3', that.conditions.pm10);
@@ -291,6 +294,7 @@ AirVisualAccessory.prototype = {
                           .removeCharacteristic(Characteristic.PM10Density);
                       }
                     }
+
                     if (data.data.current.pollution.p2) {
                       that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
                       that.log.debug('Current PM2.5 density is: %sµg/m3', that.conditions.pm2_5);
@@ -310,6 +314,7 @@ AirVisualAccessory.prototype = {
                           .removeCharacteristic(Characteristic.PM2_5Density);
                       }
                     }
+
                     if (data.data.current.pollution.s2) {
                       that.conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
                       if (that.ppb && (that.ppb.indexOf('so2') > -1)) {
@@ -329,6 +334,7 @@ AirVisualAccessory.prototype = {
                       that.sensorService
                         .removeCharacteristic(Characteristic.SulphurDioxideDensity);
                     }
+
                     break;
                 }
                 that.sensorService
