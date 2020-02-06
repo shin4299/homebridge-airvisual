@@ -1,391 +1,366 @@
+/* eslint-disable object-curly-newline */
+/* eslint-disable class-methods-use-this */
 /* eslint-disable no-multi-spaces */
 /* eslint-disable array-bracket-spacing */
+/* eslint-disable camelcase */
 
 'use strict';
 
-const firmware = require('./package.json').version;
-const fs = require('fs');
-const request = require('request');
+const fetch = require('node-fetch');
+const { StorageArea } = require('node-kv-storage');
 
-var Service;
-var Characteristic;
+const { name: pkgName, version: firmware } = require('./package.json');
+const { ParamsURL, JSONRequest } = require('./helpers');
 
-function AirVisualAccessory(log, config) {
-  this.log = log;
-  this.name = config.name;
-  this.key = config.api_key;
-  this.sensor = config.sensor || 'air_quality';
-  this.standard = config.aqi_standard || 'us';
-  this.latitude = config.latitude;
-  this.longitude = config.longitude;
-  this.city = config.city;
-  this.state = config.state;
-  this.country = config.country;
-  this.ppb = config.ppb_units;
-  this.polling = config.polling || false;
-  this.interval = (config.interval || 60) * 60 * 1000;
-  this.https = config.https || true;
-  this.save = config.save_response || false;
+const API = 'https://api.airvisual.com';
 
-  if (!this.key) {
-    throw new Error('API key not specified');
-  }
-  if (!(['air_quality', 'humidity', 'temperature'].indexOf(this.sensor) > -1)) {
-    this.log.warn('Unsupported sensor specified, defaulting to air quality');
-    this.sensor = 'air_quality';
-  }
-  if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
-    this.log.warn('Unsupported air quality standard specified, defaulting to US');
-    this.standard = 'us';
-  }
-  if ([this.latitude, this.longitude].indexOf(undefined) > -1) {
-    if (this.latitude || this.longitude) {
-      this.log.warn('Incomplete GPS coordinates specified, defaulting to IP geolocation');
-      this.latitude = undefined;
-      this.longitude = undefined;
+let Service;
+let Characteristic;
+
+class AirVisualAccessory {
+  constructor(log, config) {
+    this.storage = new StorageArea(pkgName);
+    this.log = log;
+    this.name = config.name;
+    this.key = config.api_key;
+    this.sensor = config.sensor || 'air_quality';
+    this.standard = config.aqi_standard || 'us';
+    this.latitude = config.latitude;
+    this.longitude = config.longitude;
+    this.city = config.city;
+    this.state = config.state;
+    this.country = config.country;
+    this.ppb = config.ppb_units;
+    this.interval = (config.interval || 60) * 60 * 1000;
+
+    if (!this.key) {
+      throw new Error('API key not specified');
     }
-  }
-  if ([this.city, this.state, this.country].indexOf(undefined) > -1) {
-    if (this.city || this.state || this.country) {
-      this.log.warn('Incomplete city specified, defaulting to IP geolocation');
-      this.city = undefined;
-      this.state = undefined;
-      this.country = undefined;
+    if (!(['air_quality', 'humidity', 'temperature'].indexOf(this.sensor) > -1)) {
+      this.log.warn('Unsupported sensor specified, defaulting to air quality');
+      this.sensor = 'air_quality';
     }
-  }
-  if (this.ppb) {
-    for (var index = 0; index < this.ppb.length; index += 1) {
-      if (!(['no2', 'o3', 'so2'].indexOf(this.ppb[index]) > -1)) {
-        this.log.warn('Unsupported option specified for PPB units, units will not be converted: %s', this.ppb[index]);
-      } else {
-        this.log.debug('The following pollutant will be converted from ppb to µg/m3: %s', this.ppb[index]);
+    if (!(['cn', 'us'].indexOf(this.standard) > -1)) {
+      this.log.warn('Unsupported air quality standard specified, defaulting to US');
+      this.standard = 'us';
+    }
+
+    if (config.interval >= 1000) {
+      this.log.warn(`Interval is specified in minutes, using ${Math.floor(config.interval / 1000)} minutes instead.`);
+      this.interval = config.interval;
+    }
+
+    if ([this.latitude, this.longitude].indexOf(undefined) > -1) {
+      if (this.latitude || this.longitude) {
+        this.log.warn('Incomplete GPS coordinates specified, defaulting to IP geolocation');
+        this.latitude = undefined;
+        this.longitude = undefined;
       }
     }
-  }
-  if (!([true, false].indexOf(this.polling) > -1)) {
-    this.log.warn('Unsupported option specified for polling, defaulting to false');
-    this.polling = false;
-  }
-  if (!([true, false].indexOf(this.https) > -1)) {
-    this.log.warn('Unsupported option specified for HTTPS, defaulting to true');
-    this.polling = true;
-  }
-  if (!([true, false].indexOf(this.save) > -1)) {
-    this.log.warn('Unsupported option specified for save response, defaulting to false');
-    this.save = false;
+    if ([this.city, this.state, this.country].indexOf(undefined) > -1) {
+      if (this.city || this.state || this.country) {
+        this.log.warn('Incomplete city specified, defaulting to IP geolocation');
+        this.city = undefined;
+        this.state = undefined;
+        this.country = undefined;
+      }
+    }
+    if (this.ppb) {
+      for (let index = 0; index < this.ppb.length; index += 1) {
+        if (!(['no2', 'o3', 'so2'].indexOf(this.ppb[index]) > -1)) {
+          this.log.warn('Unsupported option specified for PPB units, units will not be converted: %s', this.ppb[index]);
+        } else {
+          this.log.debug('The following pollutant will be converted from ppb to µg/m3: %s', this.ppb[index]);
+        }
+      }
+    }
+
+    if (this.latitude && this.longitude) {
+      this.log.debug('Using specified GPS coordinates: %s°, %s°', this.latitude, this.longitude);
+      this.mode = 'gps';
+      this.serial = String(this.latitude.toFixed(3) + '°, ' + this.longitude.toFixed(3) + '°');
+    } else if (this.city && this.state && this.country) {
+      this.log.debug('Using specified city: %s, %s, %s', this.city, this.state, this.country);
+      this.mode = 'city';
+      this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
+    } else {
+      this.log.debug('Using IP geolocation');
+      this.mode = 'ip';
+      this.serial = 'IP Geolocation';
+    }
+
+    this.log.debug('Polling is %s', (this.polling) ? 'enabled' : 'disabled');
+    this.log.debug('Save response is %s', (this.save) ? 'enabled' : 'disabled');
+
+    this.getConditions = this.getConditions.bind(this);
+    this.servicePolling = this.servicePolling.bind(this);
+
+    this.servicePolling();
   }
 
-  if (this.latitude && this.longitude) {
-    this.log.debug('Using specified GPS coordinates: %s°, %s°', this.latitude, this.longitude);
-    this.mode = 'gps';
-    this.serial = String(this.latitude.toFixed(3) + '°, ' + this.longitude.toFixed(3) + '°');
-  } else if (this.city && this.state && this.country) {
-    this.log.debug('Using specified city: %s, %s, %s', this.city, this.state, this.country);
-    this.mode = 'city';
-    this.serial = String(this.city + ', ' + this.state + ', ' + this.country);
-  } else {
-    this.log.debug('Using IP geolocation');
-    this.mode = 'ip';
-    this.serial = 'IP Geolocation';
-  }
-
-  if (this.polling) {
-    var that = this;
-    setTimeout(function () {
-      that.servicePolling();
-    }, this.interval);
-  }
-
-  this.log.debug('Polling is %s', (this.polling) ? 'enabled' : 'disabled');
-  this.log.debug('HTTPS is %s', (this.https) ? 'enabled' : 'disabled');
-  this.log.debug('Save response is %s', (this.save) ? 'enabled' : 'disabled');
-
-  this.conditions = {};
-}
-
-AirVisualAccessory.prototype = {
-
-  servicePolling: function () {
+  servicePolling() {
     this.log.debug('Polling');
-    this.getData(function (conditions) {
-      var that = this;
-      switch (that.sensor) {
+    this.requestAndStoreData().then(this.getConditions).then((conditions) => {
+      switch (this.sensor) {
         case 'humidity':
-          that.sensorService.setCharacteristic(
+          this.sensorService.setCharacteristic(
             Characteristic.CurrentRelativeHumidity,
             conditions.humidity
           );
           break;
         case 'temperature':
-          that.sensorService.setCharacteristic(
+          this.sensorService.setCharacteristic(
             Characteristic.CurrentTemperature,
             conditions.temperature
           );
           break;
         case 'air_quality':
         default:
-          that.sensorService.setCharacteristic(
+          this.sensorService.setCharacteristic(
             Characteristic.AirQuality,
             conditions.air_quality
           );
           break;
       }
-      setTimeout(function () {
-        that.servicePolling();
-      }, that.interval);
-    }.bind(this));
-  },
+      setTimeout(this.servicePolling, this.interval);
+    }).catch(err => this.log.error(err.message));
+  }
 
-  getAirQuality: function (callback) {
-    this.getData(function (conditions) {
+  getAirQuality(callback) {
+    this.storage.get(this.name).then(this.getConditions).then((conditions) => {
       callback(null, conditions.air_quality);
-    });
-  },
+    }).catch(err => this.log.error(err.message));
+  }
 
-  getHumidity: function (callback) {
-    this.getData(function (conditions) {
+  getHumidity(callback) {
+    this.storage.get(this.name).then(this.getConditions).then((conditions) => {
       callback(null, conditions.humidity);
-    });
-  },
+    }).catch(err => this.log.error(err.message));
+  }
 
-  getTemperature: function (callback) {
-    this.getData(function (conditions) {
+  getTemperature(callback) {
+    this.storage.get(this.name).then(this.getConditions).then((conditions) => {
       callback(null, conditions.temperature);
-    });
-  },
+    }).catch(err => this.log.error(err.message));
+  }
 
-  getData: function (callback) {
-    var that = this;
-
-    var prefix = that.https === true ? 'https' : 'http';
-    var url;
-    switch (that.mode) {
-      case 'city':
-        url = prefix + '://api.airvisual.com/v2/city?city=' + that.city + '&state=' + that.state + '&country=' + that.country + '&key=' + that.key;
+  getConditions(data) {
+    const conditions = {};
+    conditions.aqi = parseFloat(this.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
+    conditions.humidity = parseFloat(data.data.current.weather.hu);
+    conditions.pressure = parseFloat(data.data.current.weather.pr);
+    conditions.temperature = parseFloat(data.data.current.weather.tp);
+    conditions.air_quality = this.convertAirQuality(conditions.aqi);
+    if (data.data.name) {
+      this.log.debug('Station name is: %s', data.data.name);
+    }
+    if (data.data.local_name) {
+      this.log.debug('Local name is: %s', data.data.local_name);
+    }
+    this.log.debug('City is: %s', data.data.city);
+    this.log.debug('State is: %s', data.data.state);
+    this.log.debug('Country is: %s', data.data.country);
+    this.log.debug('Latitude is: %s°', data.data.location.coordinates[1]);
+    this.log.debug('Longitude is: %s°', data.data.location.coordinates[0]);
+    switch (this.sensor) {
+      case 'humidity':
+        this.log.debug('Current humidity is: %s%', conditions.humidity);
         break;
-      case 'gps':
-        url = prefix + '://api.airvisual.com/v2/nearest_city?lat=' + that.latitude + '&lon=' + that.longitude + '&key=' + that.key;
+      case 'temperature':
+        this.log.debug('Current temperature is: %s°C (%s°F)', conditions.temperature, this.convertTemperature(conditions.temperature));
         break;
-      case 'ip':
+      case 'air_quality':
       default:
-        url = prefix + '://api.airvisual.com/v2/nearest_city?key=' + that.key;
+        this.log.debug('Current air quality index is: %s', conditions.aqi);
+        if (data.data.current.pollution.co) {
+          conditions.co = parseFloat(data.data.current.pollution.co.conc);
+          this.log.debug('Current carbon monoxide level is: %smg/m3 (%sµg/m3)', conditions.co, conditions.co * 1000);
+          conditions.co = this.convertMilligramToPPM(
+            'co',
+            conditions.co,
+            conditions.temperature,
+            conditions.pressure
+          );
+          this.log.debug('Current carbon monoxide level is: %sppm', conditions.co);
+          this.sensorService
+            .getCharacteristic(Characteristic.CarbonMonoxideLevel)
+            .setValue(conditions.co);
+        } else {
+          this.sensorService
+            .removeCharacteristic(Characteristic.CarbonMonoxideLevel);
+        }
+
+        if (data.data.current.pollution.n2) {
+          conditions.no2 = parseFloat(data.data.current.pollution.n2.conc);
+          if (this.ppb && (this.ppb.indexOf('no2') > -1)) {
+            this.log.debug('Current nitrogen dioxide density is: %sppb', conditions.no2);
+            this.conditions.no2 = this.convertPPBtoMicrogram(
+              'no2',
+              conditions.no2,
+              conditions.temperature,
+              conditions.pressure
+            );
+          }
+          this.log.debug('Current nitrogen dioxide density is: %sµg/m3', conditions.no2);
+          this.sensorService
+            .getCharacteristic(Characteristic.NitrogenDioxideDensity)
+            .setValue(conditions.no2);
+        } else {
+          this.sensorService
+            .removeCharacteristic(Characteristic.NitrogenDioxideDensity);
+        }
+
+        if (data.data.current.pollution.o3) {
+          conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
+          if (this.ppb && (this.ppb.indexOf('o3') > -1)) {
+            this.log.debug('Current ozone density is: %sppb', conditions.o3);
+            conditions.o3 = this.convertPPBtoMicrogram(
+              'o3',
+              conditions.o3,
+              conditions.temperature,
+              conditions.pressure
+            );
+          }
+          this.log.debug('Current ozone density is: %sµg/m3', conditions.o3);
+          this.sensorService
+            .getCharacteristic(Characteristic.OzoneDensity)
+            .setValue(conditions.o3);
+        } else {
+          this.sensorService
+            .removeCharacteristic(Characteristic.OzoneDensity);
+        }
+
+        if (data.data.current.pollution.p1) {
+          conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
+          this.log.debug('Current PM10 density is: %sµg/m3', conditions.pm10);
+          this.sensorService
+            .getCharacteristic(Characteristic.PM10Density)
+            .setValue(conditions.pm10);
+        } else {
+          const pm10 = this.inferPM10(conditions.aqi);
+          if (pm10) {
+            conditions.pm10 = pm10;
+            this.log('Inferred PM10 density is: %sµg/m3', conditions.pm10);
+            this.sensorService
+              .getCharacteristic(Characteristic.PM10Density)
+              .setValue(conditions.pm10);
+          } else {
+            this.sensorService
+              .removeCharacteristic(Characteristic.PM10Density);
+          }
+        }
+
+        if (data.data.current.pollution.p2) {
+          conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
+          this.log.debug('Current PM2.5 density is: %sµg/m3', conditions.pm2_5);
+          this.sensorService
+            .getCharacteristic(Characteristic.PM2_5Density)
+            .setValue(conditions.pm2_5);
+        } else {
+          const pm2_5 = this.inferPM2_5(conditions.aqi);
+          if (pm2_5) {
+            conditions.pm2_5 = pm2_5;
+            this.log('Inferred PM2.5 density is: %sµg/m3', conditions.pm2_5);
+            this.sensorService
+              .getCharacteristic(Characteristic.PM2_5Density)
+              .setValue(conditions.pm2_5);
+          } else {
+            this.sensorService
+              .removeCharacteristic(Characteristic.PM2_5Density);
+          }
+        }
+
+        if (data.data.current.pollution.s2) {
+          conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
+          if (this.ppb && (this.ppb.indexOf('so2') > -1)) {
+            this.log.debug('Current sulphur dioxide density is: %sppb', conditions.so2);
+            this.conditions.so2 = this.convertPPBtoMicrogram(
+              'so2',
+              conditions.so2,
+              conditions.temperature,
+              conditions.pressure
+            );
+          }
+          this.log.debug('Current sulphur dioxide density is: %sµg/m3', conditions.so2);
+          this.sensorService
+            .getCharacteristic(Characteristic.SulphurDioxideDensity)
+            .setValue(conditions.so2);
+        } else {
+          this.sensorService
+            .removeCharacteristic(Characteristic.SulphurDioxideDensity);
+        }
+
         break;
     }
-    url = url.replace(/ /g, '%20');
-    that.log.debug('URL is: %s', url);
-    request({
-      url: url,
-      json: true
-    }, function (requestError, response, data) {
-      if (!requestError) {
-        switch (response.statusCode) {
-          case 200:
-            switch (data.status) {
-              case 'success':
-                if (that.save) {
-                  fs.writeFile('./' + that.name + ' Response.json', JSON.stringify(data, null, 4), function (writeError) {
-                    if (writeError) {
-                      that.log.debug('Error while writing file: ' + writeError);
-                    } else {
-                      that.log.debug('File written successfully');
-                    }
-                  });
-                }
-                that.conditions.aqi = parseFloat(that.standard === 'us' ? data.data.current.pollution.aqius : data.data.current.pollution.aqicn);
-                that.conditions.humidity = parseFloat(data.data.current.weather.hu);
-                that.conditions.pressure = parseFloat(data.data.current.weather.pr);
-                that.conditions.temperature = parseFloat(data.data.current.weather.tp);
-                that.conditions.air_quality = that.convertAirQuality(that.conditions.aqi);
-                if (data.data.name) {
-                  that.log.debug('Station name is: %s', data.data.name);
-                }
-                if (data.data.local_name) {
-                  that.log.debug('Local name is: %s', data.data.local_name);
-                }
-                that.log.debug('City is: %s', data.data.city);
-                that.log.debug('State is: %s', data.data.state);
-                that.log.debug('Country is: %s', data.data.country);
-                that.log.debug('Latitude is: %s°', data.data.location.coordinates[1]);
-                that.log.debug('Longitude is: %s°', data.data.location.coordinates[0]);
-                switch (that.sensor) {
-                  case 'humidity':
-                    that.log.debug('Current humidity is: %s%', that.conditions.humidity);
-                    break;
-                  case 'temperature':
-                    that.log.debug('Current temperature is: %s°C (%s°F)', that.conditions.temperature, that.convertTemperature(that.conditions.temperature));
-                    break;
-                  case 'air_quality':
-                  default:
-                    that.log.debug('Current air quality index is: %s', that.conditions.aqi);
-                    if (data.data.current.pollution.co) {
-                      that.conditions.co = parseFloat(data.data.current.pollution.co.conc);
-                      that.log.debug('Current carbon monoxide level is: %smg/m3 (%sµg/m3)', that.conditions.co, that.conditions.co * 1000);
-                      that.conditions.co = that.convertMilligramToPPM(
-                        'co',
-                        that.conditions.co,
-                        that.conditions.temperature,
-                        that.conditions.pressure
-                      );
-                      that.log.debug('Current carbon monoxide level is: %sppm', that.conditions.co);
-                      that.sensorService
-                        .getCharacteristic(Characteristic.CarbonMonoxideLevel)
-                        .setValue(that.conditions.co);
-                    } else {
-                      that.sensorService
-                        .removeCharacteristic(Characteristic.CarbonMonoxideLevel);
-                    }
 
-                    if (data.data.current.pollution.n2) {
-                      that.conditions.no2 = parseFloat(data.data.current.pollution.n2.conc);
-                      if (that.ppb && (that.ppb.indexOf('no2') > -1)) {
-                        that.log.debug('Current nitrogen dioxide density is: %sppb', that.conditions.no2);
-                        that.conditions.no2 = that.convertPPBtoMicrogram(
-                          'no2',
-                          that.conditions.no2,
-                          that.conditions.temperature,
-                          that.conditions.pressure
-                        );
-                      }
-                      that.log.debug('Current nitrogen dioxide density is: %sµg/m3', that.conditions.no2);
-                      that.sensorService
-                        .getCharacteristic(Characteristic.NitrogenDioxideDensity)
-                        .setValue(that.conditions.no2);
-                    } else {
-                      that.sensorService
-                        .removeCharacteristic(Characteristic.NitrogenDioxideDensity);
-                    }
+    this.sensorService
+      .getCharacteristic(Characteristic.StatusActive)
+      .setValue(true);
 
-                    if (data.data.current.pollution.o3) {
-                      that.conditions.o3 = parseFloat(data.data.current.pollution.o3.conc);
-                      if (that.ppb && (that.ppb.indexOf('o3') > -1)) {
-                        that.log.debug('Current ozone density is: %sppb', that.conditions.o3);
-                        that.conditions.o3 = that.convertPPBtoMicrogram(
-                          'o3',
-                          that.conditions.o3,
-                          that.conditions.temperature,
-                          that.conditions.pressure
-                        );
-                      }
-                      that.log.debug('Current ozone density is: %sµg/m3', that.conditions.o3);
-                      that.sensorService
-                        .getCharacteristic(Characteristic.OzoneDensity)
-                        .setValue(that.conditions.o3);
-                    } else {
-                      that.sensorService
-                        .removeCharacteristic(Characteristic.OzoneDensity);
-                    }
+    return conditions;
+  }
 
-                    if (data.data.current.pollution.p1) {
-                      that.conditions.pm10 = parseFloat(data.data.current.pollution.p1.conc);
-                      that.log.debug('Current PM10 density is: %sµg/m3', that.conditions.pm10);
-                      that.sensorService
-                        .getCharacteristic(Characteristic.PM10Density)
-                        .setValue(that.conditions.pm10);
-                    } else {
-                      const pm10 = that.inferPM10(that.conditions.aqi);
-                      if (pm10) {
-                        that.conditions.pm10 = pm10;
-                        that.log('Inferred PM10 density is: %sµg/m3', that.conditions.pm10);
-                        that.sensorService
-                          .getCharacteristic(Characteristic.PM10Density)
-                          .setValue(that.conditions.pm10);
-                      } else {
-                        that.sensorService
-                          .removeCharacteristic(Characteristic.PM10Density);
-                      }
-                    }
+  getURL() {
+    const { mode, key } = this;
+    switch (mode) {
+      case 'city': {
+        const { city, state, country } = this;
+        return new ParamsURL('/v2/city', { city, state, country, key }, API);
+      }
+      case 'gps': {
+        const { latitude: lat, longitude: lon } = this;
+        return new ParamsURL('/v2/nearest_city', { lat,  lon, key }, API);
+      }
+      case 'ip':
+      default:
+        return new ParamsURL('/v2/nearest_city', { key }, API);
+    }
+  }
 
-                    if (data.data.current.pollution.p2) {
-                      that.conditions.pm2_5 = parseFloat(data.data.current.pollution.p2.conc);
-                      that.log.debug('Current PM2.5 density is: %sµg/m3', that.conditions.pm2_5);
-                      that.sensorService
-                        .getCharacteristic(Characteristic.PM2_5Density)
-                        .setValue(that.conditions.pm2_5);
-                    } else {
-                      const pm2_5 = that.inferPM2_5(that.conditions.aqi);
-                      if (pm2_5) {
-                        that.conditions.pm2_5 = pm2_5;
-                        that.log('Inferred PM2.5 density is: %sµg/m3', that.conditions.pm2_5);
-                        that.sensorService
-                          .getCharacteristic(Characteristic.PM2_5Density)
-                          .setValue(that.conditions.pm2_5);
-                      } else {
-                        that.sensorService
-                          .removeCharacteristic(Characteristic.PM2_5Density);
-                      }
-                    }
-
-                    if (data.data.current.pollution.s2) {
-                      that.conditions.so2 = parseFloat(data.data.current.pollution.s2.conc);
-                      if (that.ppb && (that.ppb.indexOf('so2') > -1)) {
-                        that.log.debug('Current sulphur dioxide density is: %sppb', that.conditions.so2);
-                        that.conditions.so2 = that.convertPPBtoMicrogram(
-                          'so2',
-                          that.conditions.so2,
-                          that.conditions.temperature,
-                          that.conditions.pressure
-                        );
-                      }
-                      that.log.debug('Current sulphur dioxide density is: %sµg/m3', that.conditions.so2);
-                      that.sensorService
-                        .getCharacteristic(Characteristic.SulphurDioxideDensity)
-                        .setValue(that.conditions.so2);
-                    } else {
-                      that.sensorService
-                        .removeCharacteristic(Characteristic.SulphurDioxideDensity);
-                    }
-
-                    break;
-                }
-                that.sensorService
-                  .getCharacteristic(Characteristic.StatusActive)
-                  .setValue(true);
-                break;
-              case 'call_limit_reached':
-                that.log.error('Call limit reached');
-                break;
-              case 'api_key_expired':
-                that.log.error('API key expired');
-                break;
-              case 'incorrect_api_key':
-                that.log.error('Incorrect API key');
-                break;
-              case 'ip_location_failed':
-                that.log.error('IP location failed');
-                break;
-              case 'no_nearest_station':
-                that.log.error('No nearest station');
-                break;
-              case 'feature_not_available':
-                that.log.error('Feature not available');
-                break;
-              case 'too_many_requests':
-                that.log.error('Too many requests');
-                break;
-              default:
-                that.log.error('Unknown status: %s', data.status);
-                break;
-            }
-            break;
+  async requestAndStoreData() {
+    try {
+      const url = this.getURL();
+      this.log('Fetching URL: %s', url);
+      const response = await fetch(new JSONRequest(url));
+      if (response.ok) {
+        const data = await response.json();
+        switch (data.status) {
+          case 'success':
+            await this.storage.set(this.name, data);
+            return data;
+          case 'call_limit_reached':
+            throw Error('Call limit reached');
+          case 'api_key_expired':
+            throw Error('API key expired');
+          case 'incorrect_api_key':
+            throw Error('Incorrect API key');
+          case 'ip_location_failed':
+            throw Error('IP location failed');
+          case 'no_nearest_station':
+            throw Error('No nearest station');
+          case 'feature_not_available':
+            throw Error('Feature not available');
+          case 'too_many_requests':
+            throw Error('Too many requests');
           default:
-            that.log.error('Response: %s', response.statusCode);
-            that.sensorService
-              .getCharacteristic(Characteristic.StatusActive)
-              .setValue(false);
-            break;
+            throw Error('Unknown status: %s', data.status);
         }
       } else {
-        that.log.error('Unknown error: %s', requestError);
-        that.sensorService
+        this.sensorService
           .getCharacteristic(Characteristic.StatusActive)
           .setValue(false);
+        throw Error('Response: %s', response.statusCode);
       }
-      callback(that.conditions);
-    });
-  },
+    } catch (requestError) {
+      this.sensorService
+        .getCharacteristic(Characteristic.StatusActive)
+        .setValue(false);
+      throw Error('Unknown error: %s', requestError);
+    }
+  }
 
-  convertAirQuality: function (aqi) {
-    var characteristic;
+  convertAirQuality(aqi) {
+    let characteristic;
     if (!aqi) {
       characteristic = Characteristic.AirQuality.UNKNOWN;
     } else if (aqi >= 201) {
@@ -402,12 +377,12 @@ AirVisualAccessory.prototype = {
       characteristic = Characteristic.AirQuality.UNKNOWN;
     }
     return characteristic;
-  },
+  }
 
   // Source: https://en.wikipedia.org/wiki/Air_quality_index#Computing_the_AQI
-  inferPM2_5: function (aqi) { // μg/m3
+  inferPM2_5(aqi) { // μg/m3
     if (!aqi) return null;
-    var table = [
+    const table = [
       [  0,  50,   0.0,  12.0],
       [ 50, 100,  12.0,  35.5],
       [100, 150,  35.5,  55.5],
@@ -416,13 +391,13 @@ AirVisualAccessory.prototype = {
       [300, 400, 250.5, 350.5],
       [400, 500, 350.5, 500.5],
     ];
-    var [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
+    const [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
     return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
-  },
+  }
 
-  inferPM10: function (aqi) { // μg/m3
+  inferPM10(aqi) { // μg/m3
     if (!aqi) return null;
-    var table = [
+    const table = [
       [  0,  50,   0,  55],
       [ 50, 100,  55, 155],
       [100, 150, 155, 255],
@@ -431,12 +406,12 @@ AirVisualAccessory.prototype = {
       [300, 400, 425, 505],
       [400, 500, 505, 605],
     ];
-    var [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
+    const [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
     return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
-  },
+  }
 
-  convertMilligramToPPM: function (pollutant, milligram, temperature, pressure) {
-    var weight;
+  convertMilligramToPPM(pollutant, milligram, temperature, pressure) {
+    let weight;
     switch (pollutant) {
       case 'co':
         weight = 28.01;
@@ -446,10 +421,10 @@ AirVisualAccessory.prototype = {
         break;
     }
     return ((milligram * 22.41 * ((temperature + 273) / 273) * (1013 / pressure)) / weight);
-  },
+  }
 
-  convertPPBtoMicrogram: function (pollutant, ppb, temperature, pressure) {
-    var weight;
+  convertPPBtoMicrogram(pollutant, ppb, temperature, pressure) {
+    let weight;
     switch (pollutant) {
       case 'no2':
         weight = 46.01;
@@ -465,19 +440,19 @@ AirVisualAccessory.prototype = {
         break;
     }
     return Math.round(ppb * (weight / (22.41 * ((temperature + 273) / 273) * (1013 / pressure))));
-  },
+  }
 
-  convertTemperature: function (temperature) {
+  convertTemperature(temperature) {
     return (temperature * 1.8) + 32;
-  },
+  }
 
-  identify: function (callback) {
+  identify(callback) {
     this.log.debug('Identified');
     callback();
-  },
+  }
 
-  getServices: function () {
-    var services = [];
+  getServices() {
+    const services = [];
 
     this.accessoryInformationService = new Service.AccessoryInformation();
 
@@ -532,9 +507,10 @@ AirVisualAccessory.prototype = {
 
     return services;
   }
-};
+}
 
-module.exports = function (homebridge) {
+module.exports = (homebridge) => {
+  global.NODE_KV_STORAGE_DIR = homebridge.user.storagePath();
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   homebridge.registerAccessory('homebridge-airvisual', 'AirVisual', AirVisualAccessory);

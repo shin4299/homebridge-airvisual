@@ -1,7 +1,5 @@
 # homebridge-airvisual
 
-[![NPM Version](https://img.shields.io/npm/v/homebridge-airvisual.svg)](https://www.npmjs.com/package/homebridge-airvisual)
-
 Homebridge plugin for the AirVisual API which allows access to outdoor air quality, humidity, and temperature.
 
 ## Installation
@@ -29,8 +27,7 @@ Example config.json:
     "state": "",
     "country": "",
     "ppb_units": ["no2", "o3", "so2"],
-    "polling": false,
-    "https": true
+    "interval": 60,
   }
 ],
 ```
@@ -50,8 +47,7 @@ Field | Required | Default | Description
 `state` | no | | See [**Location**](#location) notes below
 `country` | no | | See [**Location**](#location) notes below
 `ppb_units` | no | | See [**Units**](#units) notes below
-`polling` | no | `false` | Must be `true` or `false` (must be a boolean, not a string)
-`https` | no | `true` | Must be `true` or `false` (must be a boolean, not a string)
+`interval` | no | `60` | Set the polling interval in minutes 
 
 ## Location
 
@@ -88,3 +84,19 @@ Only `no2`, `o3`, and `so2` are supported for conversion.
 * Homebridge supports multiple instances for accessories; the configuration entry can be duplicated for each location and/or sensor type desired.
 
 * This plugin supports additional characteristics for air quality sensors if a "Startup" or "Enterprise" API key from AirVisual is used.
+
+* The free tier of the API does not provide particle densities, however this plugin will infer the PM2.5 and PM10 densities based on the AQI according to [this table](https://en.wikipedia.org/wiki/Air_quality_index#Computing_the_AQI).
+
+* By default the API is queried once per hour. A 10 minute interval would result in ~5000 requests per month, while the free tier includes 10.000 requests per month.
+
+* AQI categories are mapped to HomeKit categories as follows. Note that HomeKit will visually highlight the sensor for categories Inferior and Poor.
+
+  AQI     | AQI Category                   | HomeKit
+  --------|--------------------------------|-----------
+  0-50    | Good                           | Excellent
+  51-100  | Moderate                       | Good
+  101-150 | Unhealthy for Sensitive Groups | Fair
+  151-200 | Unhealthy                      | Inferior
+  201-300 | Very Unhealthy                 | Poor
+  301-500 | Hazardous                      | Poor
+

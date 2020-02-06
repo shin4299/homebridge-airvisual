@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-airvisual",
+  "name": "homebridge-airvisual-2",
   "version": "1.2.1",
   "description": "Homebridge plugin for AirVisual API",
   "main": "index.js",
@@ -21,7 +21,7 @@
     "weather"
   ],
   "engines": {
-    "node": ">=0.12.0",
+    "node": ">=11",
     "homebridge": ">=0.2.0"
   },
   "devDependencies": {
@@ -29,13 +29,11 @@
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.9.0"
   },
-  "author": "Matt Schmitt",
+  "author": "Florian Klampfer <mail@qwtel.com> (https://qwtel.com/)",
   "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/schmittx/homebridge-airvisual/issues"
-  },
-  "homepage": "https://github.com/schmittx/homebridge-airvisual#readme",
+  "homepage": "https://github.com/qwtel/homebridge-airvisual-2#readme",
   "dependencies": {
-    "request": "^2.88.0"
+    "node-fetch": "^2.6.0",
+    "node-kv-storage": "^1.1.0"
   }
 }
