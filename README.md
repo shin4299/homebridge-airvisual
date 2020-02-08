@@ -53,7 +53,7 @@ Field | Required | Default | Description
 `state` | no | | See [**Location**](#location) notes below
 `country` | no | | See [**Location**](#location) notes below
 `ppb_units` | no | | See [**Units**](#units) notes below
-`interval` | no | `60` | Set the polling interval in minutes 
+`interval` | no | `30` | Set the polling interval in minutes 
 
 ## Location
 
