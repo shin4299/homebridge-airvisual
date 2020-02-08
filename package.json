@@ -21,7 +21,7 @@
     "weather"
   ],
   "engines": {
-    "node": ">=11",
+    "node": ">=10.18",
     "homebridge": ">=0.2.0"
   },
   "devDependencies": {

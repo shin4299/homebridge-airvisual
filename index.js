@@ -31,7 +31,7 @@ class AirVisualAccessory {
     this.state = config.state;
     this.country = config.country;
     this.ppb = config.ppb_units;
-    this.interval = (config.interval || 60) * 60 * 1000;
+    this.interval = (config.interval || 30) * 60 * 1000;
 
     if (!this.key) {
       throw new Error('API key not specified');
@@ -237,17 +237,17 @@ class AirVisualAccessory {
             .getCharacteristic(Characteristic.PM10Density)
             .setValue(conditions.pm10);
         } else {
-          const pm10 = this.inferPM10(conditions.aqi);
-          if (pm10) {
-            conditions.pm10 = pm10;
-            this.log('Inferred PM10 density is: %sµg/m3', conditions.pm10);
-            this.sensorService
-              .getCharacteristic(Characteristic.PM10Density)
-              .setValue(conditions.pm10);
-          } else {
-            this.sensorService
-              .removeCharacteristic(Characteristic.PM10Density);
-          }
+          // const pm10 = this.inferPM10(conditions.aqi);
+          // if (pm10) {
+          //   conditions.pm10 = pm10;
+          //   this.log('Inferred PM10 density is: %sµg/m3', conditions.pm10);
+          //   this.sensorService
+          //     .getCharacteristic(Characteristic.PM10Density)
+          //     .setValue(conditions.pm10);
+          // } else {
+          this.sensorService
+            .removeCharacteristic(Characteristic.PM10Density);
+          // }
         }
 
         if (data.data.current.pollution.p2) {
@@ -395,20 +395,20 @@ class AirVisualAccessory {
     return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
   }
 
-  inferPM10(aqi) { // μg/m3
-    if (!aqi) return null;
-    const table = [
-      [  0,  50,   0,  55],
-      [ 50, 100,  55, 155],
-      [100, 150, 155, 255],
-      [150, 200, 255, 355],
-      [200, 300, 355, 425],
-      [300, 400, 425, 505],
-      [400, 500, 505, 605],
-    ];
-    const [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
-    return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
-  }
+  // inferPM10(aqi) { // μg/m3
+  //   if (!aqi) return null;
+  //   const table = [
+  //     [  0,  50,   0,  55],
+  //     [ 50, 100,  55, 155],
+  //     [100, 150, 155, 255],
+  //     [150, 200, 255, 355],
+  //     [200, 300, 355, 425],
+  //     [300, 400, 425, 505],
+  //     [400, 500, 505, 605],
+  //   ];
+  //   const [aqiLow, aqiHigh, pmLow, pmHigh] = table.find(([l, h]) => aqi >= l && aqi < h);
+  //   return pmLow + (((aqi - aqiLow) * (pmHigh - pmLow)) / (aqiHigh - aqiLow));
+  // }
 
   convertMilligramToPPM(pollutant, milligram, temperature, pressure) {
     let weight;

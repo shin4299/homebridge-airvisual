@@ -2,6 +2,12 @@
 
 Homebridge plugin for the AirVisual API which allows access to outdoor air quality, humidity, and temperature.
 
+It differs from `homebridge-airvisual` in the following ways:
+
+* Data is fetched and stored on a fixed interval instead of making HTTP requests on demand.
+* Added logic to infer PM2.5 density based on AQI (free API plan only)
+* Updated to modern ES syntax (requires node 10.18 or newer)
+
 ## Installation
 
 1. Install homebridge using the instructions at https://github.com/nfarina/homebridge#installation
@@ -27,7 +33,7 @@ Example config.json:
     "state": "",
     "country": "",
     "ppb_units": ["no2", "o3", "so2"],
-    "interval": 60,
+    "interval": 30,
   }
 ],
 ```
@@ -85,9 +91,10 @@ Only `no2`, `o3`, and `so2` are supported for conversion.
 
 * This plugin supports additional characteristics for air quality sensors if a "Startup" or "Enterprise" API key from AirVisual is used.
 
-* The free tier of the API does not provide particle densities, however this plugin will infer the PM2.5 and PM10 densities based on the AQI according to [this table](https://en.wikipedia.org/wiki/Air_quality_index#Computing_the_AQI).
+* The free tier of the API does not provide particle densities, however this plugin will infer the PM2.5 density based on the AQI according to [this table](https://en.wikipedia.org/wiki/Air_quality_index#Computing_the_AQI).
+  Note that according to API documentation, a city's AQI is based on the "main pollutant" which may or may not be PM2.5. Upgrade your API plan to get correct pollutant data.
 
-* By default the API is queried once per hour. A 10 minute interval would result in ~5000 requests per month, while the free tier includes 10.000 requests per month.
+* By default the API is queried once every 30 minutes, which is half of AirVisual's station update frequency of once per hour.
 
 * AQI categories are mapped to HomeKit categories as follows. Note that HomeKit will show visual cues on the dashboard for categories "Inferior" and "Poor".
 
