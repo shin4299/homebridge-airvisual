@@ -31,7 +31,7 @@ class AirVisualAccessory {
     this.state = config.state;
     this.country = config.country;
     this.ppb = config.ppb_units;
-    this.interval = (config.interval || 30) * 60 * 1000;
+    this.interval = (config.interval || 15) * 60 * 1000;
 
     if (!this.key) {
       throw new Error('API key not specified');
@@ -513,5 +513,5 @@ module.exports = (homebridge) => {
   global.NODE_KV_STORAGE_DIR = homebridge.user.storagePath();
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
-  homebridge.registerAccessory('homebridge-airvisual', 'AirVisual', AirVisualAccessory);
+  homebridge.registerAccessory('homebridge-airvisual-2', 'AirVisual', AirVisualAccessory);
 };
