@@ -1,6 +1,6 @@
 {
   "name": "homebridge-airvisual-2",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Homebridge plugin for AirVisual API",
   "main": "index.js",
   "scripts": {
